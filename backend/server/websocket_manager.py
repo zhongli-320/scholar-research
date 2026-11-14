@@ -18,6 +18,9 @@ from .server_utils import CustomLogsHandler
 
 logger = logging.getLogger(__name__)
 
+_research_limit = int(os.getenv("MAX_CONCURRENT_RESEARCH", "0"))
+_research_semaphore = asyncio.Semaphore(_research_limit) if _research_limit > 0 else None
+
 class WebSocketManager:
     """Manage websockets"""
 
@@ -113,7 +116,14 @@ class WebSocketManager:
         )
         return report
 
-async def run_agent(task, report_type, report_source, source_urls, document_urls, tone: Tone, websocket, stream_output=stream_output, headers=None, query_domains=[], config_path="", return_researcher=False, mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
+async def run_agent(*args, **kwargs):
+    if _research_semaphore:
+        async with _research_semaphore:
+            return await _run_agent(*args, **kwargs)
+    return await _run_agent(*args, **kwargs)
+
+
+async def _run_agent(task, report_type, report_source, source_urls, document_urls, tone: Tone, websocket, stream_output=stream_output, headers=None, query_domains=[], config_path="", return_researcher=False, mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
     """Run the agent."""    
     # Create logs handler for this research task
     logs_handler = CustomLogsHandler(websocket, task)

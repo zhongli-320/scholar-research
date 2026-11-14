@@ -385,6 +385,8 @@ async def generate_report(research_request: ResearchRequest, background_tasks: B
 
 @app.get("/files/")
 async def list_files():
+    if os.getenv("PUBLIC_DEMO_MODE") == "1":
+        return {"files": []}
     if not os.path.exists(DOC_PATH):
         os.makedirs(DOC_PATH, exist_ok=True)
     files = os.listdir(DOC_PATH)
@@ -399,11 +401,15 @@ async def run_multi_agents():
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
+    if os.getenv("PUBLIC_DEMO_MODE") == "1":
+        raise HTTPException(status_code=403, detail="File uploads are disabled for the public demo")
     return await handle_file_upload(file, DOC_PATH)
 
 
 @app.delete("/files/{filename}")
 async def delete_file(filename: str):
+    if os.getenv("PUBLIC_DEMO_MODE") == "1":
+        raise HTTPException(status_code=403, detail="File deletion is disabled for the public demo")
     return await handle_file_deletion(filename, DOC_PATH)
 
 

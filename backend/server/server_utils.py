@@ -420,6 +420,7 @@ async def handle_websocket_communication(websocket, manager):
             running_task.cancel()
 
 def extract_command_data(json_data: Dict) -> tuple:
+    public_demo = os.getenv("PUBLIC_DEMO_MODE") == "1"
     return (
         json_data.get("task"),
         json_data.get("report_type"),
@@ -429,8 +430,8 @@ def extract_command_data(json_data: Dict) -> tuple:
         json_data.get("headers", {}),
         json_data.get("report_source"),
         json_data.get("query_domains", []),
-        json_data.get("mcp_enabled", False),
+        False if public_demo else json_data.get("mcp_enabled", False),
         json_data.get("mcp_strategy", "fast"),
-        json_data.get("mcp_configs", []),
+        [] if public_demo else json_data.get("mcp_configs", []),
         json_data.get("max_search_results"),
     )

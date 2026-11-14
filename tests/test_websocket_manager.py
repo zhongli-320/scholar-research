@@ -1,4 +1,5 @@
 import importlib
+import asyncio
 import os
 import sys
 import types
@@ -98,6 +99,41 @@ class WebSocketManagerTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(report, "stub-report")
         self.assertEqual(call_kwargs["config_path"], "custom-config")
+
+    async def test_run_agent_caps_global_research_concurrency(self):
+        with patch.dict(os.environ, {"MAX_CONCURRENT_RESEARCH": "2"}, clear=False):
+            websocket_manager = _load_websocket_manager_module()
+
+        state = {"active": 0, "peak": 0}
+
+        class FakeReport:
+            def __init__(self, **kwargs):
+                pass
+
+            async def run(self):
+                state["active"] += 1
+                state["peak"] = max(state["peak"], state["active"])
+                await asyncio.sleep(0.02)
+                state["active"] -= 1
+                return "stub-report"
+
+        websocket_manager.BasicReport = FakeReport
+        websocket_manager.CustomLogsHandler = lambda websocket, task: websocket
+
+        await asyncio.gather(*(
+            websocket_manager.run_agent(
+                task=f"task-{index}",
+                report_type="research_report",
+                report_source="web",
+                source_urls=[],
+                document_urls=[],
+                tone=websocket_manager.Tone.Objective,
+                websocket=object(),
+            )
+            for index in range(4)
+        ))
+
+        self.assertLessEqual(state["peak"], 2)
 
 
 if __name__ == "__main__":
