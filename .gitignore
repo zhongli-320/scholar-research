@@ -52,6 +52,7 @@ server_log.txt
 .cursorrules
 CURSOR_RULES.md
 /.claude/worktrees/
+/.worktrees/
 /.history
 
 # Maintainer-local triage notes and editor settings :-)
