@@ -60,3 +60,35 @@ it('clears the old cursor session immediately when a new query fails', async () 
   expect(vi.mocked(listHistory).mock.calls.at(-1)?.[0]).toEqual({ query: 'new' });
   await act(async () => root.unmount());
 });
+
+it('moves focus to confirmation and returns it to the same delete button on cancel', async () => {
+  vi.mocked(listHistory).mockReset().mockResolvedValue({ items: [{ id: 'one', question: 'One', display_title: 'One', source: 'openalex', status: 'completed', result_count: 1, created_at: '2026-01-01' }], next_cursor: null, matched_count: 1 });
+  vi.mocked(deleteSearch).mockReset();
+  const container = document.createElement('div'); document.body.appendChild(container); const root = createRoot(container);
+  await act(async () => root.render(<SearchHistoryScreen />));
+  const button = (label: string) => [...container.querySelectorAll('button')].find((b) => b.textContent === label)!;
+  const original = button('删除'); await act(async () => original.focus());
+  await act(async () => original.click());
+  expect(document.activeElement).toBe(button('确认删除'));
+  await act(async () => button('取消').click());
+  expect(document.activeElement).toBe(button('删除'));
+  expect(deleteSearch).not.toHaveBeenCalled();
+  await act(async () => root.unmount()); container.remove();
+});
+
+it('does not restore focus to a record after successful deletion', async () => {
+  const item = { id: 'one', question: 'One', display_title: 'One', source: 'openalex', status: 'completed', result_count: 1, created_at: '2026-01-01' };
+  vi.mocked(listHistory).mockReset().mockResolvedValueOnce({ items: [item], next_cursor: null, matched_count: 1 }).mockResolvedValueOnce({ items: [], next_cursor: null, matched_count: 0 });
+  vi.mocked(deleteSearch).mockReset().mockResolvedValue();
+  const container = document.createElement('div'); document.body.appendChild(container); const root = createRoot(container);
+  await act(async () => root.render(<SearchHistoryScreen />));
+  const button = (label: string) => [...container.querySelectorAll('button')].find((b) => b.textContent === label)!;
+  await act(async () => button('删除').click());
+  const confirmation = button('确认删除');
+  expect(confirmation.getAttribute('aria-label')).toContain('One');
+  await act(async () => confirmation.click());
+  expect(container.textContent).not.toContain('One');
+  expect(document.activeElement).not.toBe(confirmation);
+  expect(vi.mocked(deleteSearch)).toHaveBeenCalledOnce();
+  await act(async () => root.unmount()); container.remove();
+});
