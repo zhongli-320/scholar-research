@@ -28,28 +28,34 @@ export default function LiteratureRunScreen({ id }: { id: string }) {
       if (!active) return;
       setEvents((previous) => previous.some((item) => item.sequence === event.sequence) ? previous : [...previous, event]);
       if (['run.completed', 'run.completed_with_warnings', 'run.failed', 'run.cancelled'].includes(event.event_type)) {
+        close();
         void getRun(id).then((value) => { if (active) setRun(value); }).catch((error) => { if (active) setProblem(message(error)); });
       }
-    } });
+    }, onError: () => { if (active) setProblem('进度连接中断，请重试恢复此检索。'); } });
     return () => { active = false; close(); };
   }, [id, run]);
   const progress = reducePaperSeekEvents(events);
+  const status = run && terminal(run.status) ? run.status : progress.status || run?.status || '';
+  async function retry() {
+    setProblem('');
+    try { setRun(await getRun(id)); } catch (error) { setProblem(message(error)); }
+  }
   async function cancel() {
     setCancelling(true); setProblem('');
     try { setRun(await cancelRun(id)); } catch (error) { setProblem(message(error)); } finally { setCancelling(false); }
   }
   return <main className="mx-auto w-full max-w-[1000px] px-5 pb-16 pt-12 sm:px-8">
     <Eye>PaperSeek · 文献检索</Eye>
-    {problem && <p role="alert" className="mt-4 text-rubric">{problem}</p>}
+    {problem && <div role="alert" className="mt-4 text-rubric">{problem} <button type="button" className="underline" onClick={() => void retry()}>重试恢复</button></div>}
     {!run && !problem && <p className="mt-5">正在加载检索任务…</p>}
     {run && <>
       <h1 className="mt-5 font-display text-3xl font-semibold">{run.display_title || run.question}</h1>
-      <p className="mt-3 text-sm text-ink-3">{run.source} · 状态：{run.status} · 阶段：{progress.stage || run.current_step || '—'} · 结果：{run.result_count}</p>
+      <p className="mt-3 text-sm text-ink-3">{run.source} · 状态：{status} · 阶段：{progress.stage || run.current_step || '—'} · 结果：{run.result_count}</p>
       {[...new Set([...(run.warnings ?? []), ...progress.warnings])].map((warning) => <p key={warning} className="mt-2 text-sm text-rubric">警告：{warning}</p>)}
       {(run.error_code || progress.errorCode) && <p role="alert" className="mt-2 text-rubric">错误代码：{run.error_code || progress.errorCode}</p>}
-      {!terminal(run.status) && <button className="gr-btn mt-5" type="button" onClick={() => void cancel()} disabled={cancelling || run.status === 'cancelling'}>{cancelling || run.status === 'cancelling' ? '正在取消' : '取消此检索'}</button>}
+      {!terminal(status) && <button className="gr-btn mt-5" type="button" onClick={() => void cancel()} disabled={cancelling || status === 'cancelling'}>{cancelling || status === 'cancelling' ? '正在取消' : '取消此检索'}</button>}
       {progress.events.length > 0 && <details className="mt-5 text-sm"><summary className="cursor-pointer">检索进度（{progress.events.length}）</summary><ol className="mt-2 space-y-1">{progress.events.map((event) => <li key={event.sequence}>{event.sequence}. {event.stage} · {event.event_type} {Object.entries(event.payload ?? {}).filter(([key, value]) => /count|completed_batches|batch_count/.test(key) && typeof value === 'number').map(([key, value]) => `${key}: ${value}`).join(' · ')}</li>)}</ol></details>}
-      {['completed', 'completed_with_warnings'].includes(run.status) && <LiteratureResults id={id} />}
+      {['completed', 'completed_with_warnings'].includes(status) && <LiteratureResults id={id} />}
     </>}
   </main>;
 }

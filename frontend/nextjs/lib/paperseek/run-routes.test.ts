@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { GET as getRun } from '../../app/api/paperseek/runs/[id]/route';
+import { GET as results } from '../../app/api/paperseek/runs/[id]/results/route';
 import { GET as events } from '../../app/api/paperseek/runs/[id]/events/route';
 import { GET as artifact } from '../../app/api/paperseek/runs/[id]/artifacts/[artifactId]/route';
 
@@ -42,4 +43,9 @@ it('aborts the upstream event request when the browser disconnects', async () =>
   await events(new Request('http://localhost', { signal: aborter.signal }), { params: { id: 'run' } });
   aborter.abort();
   expect(signal.aborted).toBe(true);
+});
+it('forwards only the supported results filters', async () => {
+  const fetch = vi.fn().mockResolvedValue(new Response('{}')); vi.stubGlobal('fetch', fetch);
+  await results(new Request('http://localhost/?cursor=a&page_size=20&query=robot&min_score=0&metadata=doi&sort=year&journal=cas1&acceptance=oral&unexpected=secret'), { params: { id: 'a/b' } });
+  expect(fetch.mock.calls[0][0]).toBe('http://127.0.0.1:8767/api/v1/runs/a%2Fb/results?cursor=a&page_size=20&query=robot&min_score=0&metadata=doi&sort=year&journal=cas1&acceptance=oral');
 });

@@ -33,3 +33,17 @@ it('subscribes to PaperSeek query selection and closes the stream', async () => 
   expect(received).toHaveBeenCalledWith(expect.objectContaining({ sequence: 5 }));
   cleanup(); expect(close).toHaveBeenCalledOnce(); vi.unstubAllGlobals();
 });
+it('receives all current research event types and keeps degradation codes', () => {
+  const listeners = new Map<string, (event: Event) => void>();
+  vi.stubGlobal('EventSource', vi.fn(function () { return { addEventListener: (type: string, listener: (event: Event) => void) => listeners.set(type, listener), close() {} }; }));
+  const received: PaperSeekEvent[] = [];
+  const close = openRunEvents('run', { onEvent: (item) => received.push(item) });
+  const names = ['query.degraded', 'retrieval.embedding_completed', 'selection.embedding_completed', 'selection.decision_progress', 'selection.decision_degraded', 'run.cancelling'];
+  names.forEach((name, index) => listeners.get(name)?.(new MessageEvent(name, { data: JSON.stringify(event(index + 1, name, 'query', { code: name })) })));
+  expect(received.map((item) => item.event_type)).toEqual(names);
+  expect(reducePaperSeekEvents(received).warnings).toEqual(['query.degraded', 'selection.decision_degraded']);
+  close(); vi.unstubAllGlobals();
+});
+it('exposes cancelling state from the durable event', () => {
+  expect(reducePaperSeekEvents([event(2, 'run.cancelling', 'lifecycle')]).status).toBe('cancelling');
+});
