@@ -1,11 +1,12 @@
 'use client';
 
+import Link from 'next/link';
 import { useId, useRef, useState } from 'react';
 import { reportLabel, type BriefValue } from '@/lib/research/brief';
 import { MCP_PRESETS, checkMcp, formatMcp, mcpPlaceholders, togglePreset } from '@/lib/research/mcp';
 import { MCP_STRATEGIES, REPORT_TYPES, SOURCES, SitesEditor, TONES, type Option } from './Brief';
 import { useBackend, type BackendStatus } from './backend';
-import { openSettings, useBrief, type SettingsTab } from './preferences';
+import { useBrief, type SettingsTab } from './preferences';
 
 const MCP_DOCS = 'https://docs.gptr.dev/docs/gpt-researcher/retrievers/mcp-configs';
 
@@ -206,9 +207,9 @@ function DocumentsPanel({ brief, onChange }: { brief: BriefValue; onChange: (bri
     return (
       <Section title="Documents on the backend" hint={backend.status === 'checking' ? 'Checking the connection.' : 'The backend is not reachable, so its documents cannot be listed.'}>
         {backend.status === 'offline' && (
-          <button type="button" className="gr-btn-line mt-4" onClick={() => openSettings('backend')}>
+          <Link href="/settings?tab=gpt-researcher&section=backend" className="gr-btn-line mt-4">
             Backend settings
-          </button>
+          </Link>
         )}
       </Section>
     );
@@ -368,7 +369,7 @@ export function ResearcherSettings({ tab }: { tab: SettingsTab }) {
   };
   return <div className="sm:grid sm:grid-cols-[200px_minmax(0,1fr)]">
     <nav aria-label="Settings sections" className="flex overflow-x-auto border-b border-rule-soft sm:flex-col sm:border-b-0 sm:border-r">
-      {TABS.map((t) => <a key={t.id} href={`/settings?tab=gpt-researcher&section=${t.id}`} aria-current={t.id === tab ? 'page' : undefined} className="flex justify-between gap-3 whitespace-nowrap px-4 py-3 text-sm font-medium aria-[current=page]:text-rubric">{t.label}<span className="font-code text-ink-3">{hints[t.id]}</span></a>)}
+      {TABS.map((t) => <Link key={t.id} href={`/settings?tab=gpt-researcher&section=${t.id}`} aria-current={t.id === tab ? 'page' : undefined} className="flex justify-between gap-3 whitespace-nowrap px-4 py-3 text-sm font-medium aria-[current=page]:text-rubric">{t.label}<span className="font-code text-ink-3">{hints[t.id]}</span></Link>)}
     </nav>
     <div className="px-5 py-6 sm:px-8">
       {tab === 'research' && <ResearchPanel brief={brief} onChange={setBrief} />}

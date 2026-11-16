@@ -1,10 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useState } from 'react';
 import { DEFAULT_BRIEF, type BriefValue } from '@/lib/research/brief';
 import { MCP_PRESETS, checkMcp } from '@/lib/research/mcp';
 import { popoverPanel, usePopover } from './popover';
-import { openSettings } from './preferences';
 
 export interface Option {
   value: string;
@@ -300,14 +300,13 @@ const names = (list: string[]) => (list.length <= 2 ? list.join(' and ') : `${li
 function McpClause({ value }: { value: BriefValue }) {
   if (!value.mcp_enabled) return null;
   const check = checkMcp(value.mcp_configs);
-  const open = () => openSettings('mcp');
   if (check.state === 'invalid') {
     return (
       <>
         {' '}
-        <button type="button" className="gr-select !text-rubric" onClick={open}>
+        <Link href="/settings?tab=gpt-researcher&section=mcp" className="gr-select !text-rubric">
           The MCP config needs fixing
-        </button>
+        </Link>
         .
       </>
     );
@@ -316,11 +315,11 @@ function McpClause({ value }: { value: BriefValue }) {
     <>
       {' '}
       {check.state === 'empty' ? 'MCP is on, ' : 'Also asks '}
-      <button type="button" className="gr-select" onClick={open}>
+      <Link href="/settings?tab=gpt-researcher&section=mcp" className="gr-select">
         {check.state === 'empty'
           ? 'with no servers yet'
           : `${names(check.servers.map((s) => MCP_PRESETS.find((p) => p.server.name === s.name)?.label ?? s.name))} over MCP`}
-      </button>
+      </Link>
       .
     </>
   );

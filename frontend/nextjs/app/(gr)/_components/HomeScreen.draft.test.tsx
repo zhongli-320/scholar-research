@@ -1,0 +1,57 @@
+// @vitest-environment jsdom
+import * as React from 'react';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { it, expect, vi } from 'vitest';
+import { AppRouterContext, type AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import HomeScreen from './HomeScreen';
+import SettingsPage from '../settings/page';
+import { DEFAULT_BRIEF } from '@/lib/research/brief';
+const backend = vi.hoisted(() => ({ status: 'offline', documents: [] as string[], host: '', upload: vi.fn().mockResolvedValue(undefined) }));
+const brief = { ...DEFAULT_BRIEF, mcp_enabled: true };
+vi.stubGlobal('React', React); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock('./backend', () => ({ useBackend: () => backend }));
+vi.mock('@/lib/research/live', () => ({ startResearch: vi.fn().mockReturnValue('run') }));
+vi.mock('./mode', () => ({ useMock: () => false, useLinks: () => ({ archive: '/archive', report: () => '/report' }) }));
+vi.mock('./useReports', () => ({ useReports: () => ({ rows: [] }) }));
+vi.mock('./preferences', () => ({ useBrief: () => [brief, vi.fn()] }));
+vi.mock('./ui', () => ({ Arrow: () => null, Connection: () => null }));
+it.each(['backend', 'mcp'])('keeps the question and attachments through the %s settings entry and section navigation', async (section) => {
+  backend.status = 'offline';
+  backend.upload.mockClear();
+  const container = document.createElement('div'); document.body.appendChild(container);
+  const root = createRoot(container);
+  const router: AppRouterInstance = { push: vi.fn(), replace: vi.fn(), back: vi.fn(), forward: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() };
+  const render = async (page: React.ReactNode) => act(async () => { root.render(<AppRouterContext.Provider value={router}>{page}</AppRouterContext.Provider>); });
+  const follow = async (href: string) => {
+    const link = container.querySelector(`a[href="${href}"]`)!;
+    expect(link).not.toBeNull();
+    await act(async () => {
+      const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+      link.dispatchEvent(click);
+      expect(click.defaultPrevented).toBe(true);
+    });
+    expect(router.push).toHaveBeenLastCalledWith(href, expect.anything());
+  };
+  await render(<HomeScreen />);
+  const question = container.querySelector('textarea')!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(question, 'My research question'); question.dispatchEvent(new Event('input', { bubbles: true })); });
+  const picker = container.querySelector<HTMLInputElement>('input[type=file]')!;
+  const file = new File(['contents'], 'evidence.txt', { type: 'text/plain' });
+  Object.defineProperty(picker, 'files', { value: [file], configurable: true });
+  await act(async () => picker.dispatchEvent(new Event('change', { bubbles: true })));
+  expect(container.textContent).toContain('evidence.txt');
+  await follow(`/settings?tab=gpt-researcher&section=${section}`);
+  await render(<SettingsPage searchParams={{ tab: 'gpt-researcher', section }} />);
+  await follow('/settings?tab=gpt-researcher&section=documents');
+  await render(<SettingsPage searchParams={{ tab: 'gpt-researcher', section: 'documents' }} />);
+  await follow('/settings?tab=paperseek');
+  backend.status = 'online';
+  await render(<HomeScreen />);
+  expect(container.querySelector('textarea')?.value).toBe('My research question');
+  expect(container.textContent).toContain('evidence.txt');
+  await act(async () => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+  expect(backend.upload.mock.calls[0][0]).toBe(file);
+  await act(async () => root.unmount()); container.remove();
+});

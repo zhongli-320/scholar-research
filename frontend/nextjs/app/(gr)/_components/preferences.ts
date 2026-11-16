@@ -9,7 +9,6 @@ const BRIEF_KEY = 'gptr-brief';
 
 let brief = DEFAULT_BRIEF;
 let loaded = false;
-let tab: SettingsTab | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -57,8 +56,4 @@ export function useBrief() {
     () => DEFAULT_BRIEF,
   );
   return [value, setBrief] as const;
-}
-
-export function openSettings(next: SettingsTab = 'research') {
-  window.location.href = `/settings?tab=gpt-researcher&section=${next}`;
 }

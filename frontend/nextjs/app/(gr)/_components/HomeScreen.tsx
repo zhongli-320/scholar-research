@@ -9,7 +9,7 @@ import { useBackend } from './backend';
 import Brief, { type BriefField } from './Brief';
 import { FaviconStack } from './Favicon';
 import { useLinks, useMock } from './mode';
-import { openSettings, useBrief, type SettingsTab } from './preferences';
+import { useBrief, type SettingsTab } from './preferences';
 import { Arrow, Connection } from './ui';
 import { useReports } from './useReports';
 
@@ -18,6 +18,9 @@ const suggestions = [
   'How close are solid state batteries to mass production?',
   'What does the EU AI Act require from a small startup?',
 ];
+
+// shortcut: Retain draft files during client-side navigation, use IndexedDB if reload recovery is needed.
+let reviewDraft: { question: string; files: File[] } | null = null;
 
 const size = (bytes: number) => (bytes < 1e6 ? `${Math.max(1, Math.round(bytes / 1e3))} KB` : `${(bytes / 1e6).toFixed(1)} MB`);
 
@@ -36,9 +39,9 @@ export default function HomeScreen({
   const backend = useBackend();
   const { rows: recent } = useReports();
   const picker = useRef<HTMLInputElement>(null);
-  const [question, setQuestion] = useState(initialQuestion);
+  const [question, setQuestion] = useState(() => !mock && reviewDraft ? reviewDraft.question : initialQuestion);
   const [brief, setBrief] = useBrief();
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<File[]>(() => !mock && reviewDraft ? reviewDraft.files : []);
   const [dragging, setDragging] = useState(false);
   const [note, setNote] = useState('');
   const [starting, setStarting] = useState(false);
@@ -49,8 +52,10 @@ export default function HomeScreen({
   const canStart = Boolean(question.trim()) && !offline && !starting && !mcpBroken;
 
   useEffect(() => {
-    if (settingsTab) openSettings(settingsTab);
-  }, [settingsTab]);
+    if (settingsTab) router.push(`/settings?tab=gpt-researcher&section=${settingsTab}`);
+  }, [settingsTab, router]);
+
+  useEffect(() => { if (!mock) reviewDraft = { question, files }; }, [mock, question, files]);
 
   const addFiles = (list: FileList | null) => {
     const incoming = Array.from(list ?? []);
@@ -73,6 +78,7 @@ export default function HomeScreen({
       setStarting(false);
       return setProblem(e instanceof Error ? e.message : String(e));
     }
+    reviewDraft = null;
     router.push(`/research/${startResearch(question.trim(), brief)}`);
   };
 
