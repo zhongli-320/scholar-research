@@ -78,3 +78,8 @@ npm run dev
 $project-handoff 恢复。项目 E:\中大研究生涯\信息组织\research agent\gpt-researcher；来源 E:\中大研究生涯\信息组织\research agent\gpt-researcher\PROJECT_STATE.md 交接区 PH-20261112-gptr-local-01；目标是继续验证新版前端 + 智谱 glm-5.3-flash 的完整研究流程；限制是不要泄露或提交 .env 密钥，不要直接设置 ALLOW_PRIVATE_URLS=true，不要删除 data/ 和 outputs/；第一步先只读核对最新成功报告并启动前后端复跑同一查询；验收为至少抓取一个网页并生成有正文和来源的非空报告。先只读核对再继续。
 ```
 <!-- GPTR-LOCAL-HANDOFF-END PH-20261112-gptr-local-01 -->
+
+## PaperSeek 统一工作台启动入口（2026-11-16）
+
+- 本工作树提供 `scripts/start-research-workbench.ps1`；使用 `-CheckOnly` 可只检查三个服务的健康与端口状态。
+- 默认端口为 PaperSeek 8767、GPT Researcher 8000、Next.js 3000；日志位于本工作树 `logs/workbench/`。详细说明见 `README-zh_CN.md`。

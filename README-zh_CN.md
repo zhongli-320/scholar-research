@@ -377,3 +377,9 @@ GPT Researcher 现已提供增强版前端，改善用户体验并简化研究�
 <p align="right">
   <a href="#top">⬆️ 返回顶部</a>
 </p>
+
+## 本机研究工作台启动（Windows）
+
+在本仓库目录运行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-research-workbench.ps1`。仅检查状态而不启动服务：追加 `-CheckOnly`。默认端口依次为 PaperSeek `8767`、GPT Researcher 后端 `8000`、Next.js `3000`；可分别用 `-PaperSeekPort`、`-BackendPort`、`-FrontendPort` 指定。健康服务直接复用；端口已占用但健康检查失败时退出，不停止原进程。复用已有前端时，其现有后台地址配置不会被修改。
+
+脚本使用 PaperSeek 独立环境中的 `python -m paperseek_community.cli serve`，避免其 Windows 可执行入口的中文路径问题；后端使用 `python -m uvicorn` 以支持指定端口。工作树没有 `.env` 时，后端读取主仓库的 `.env`。启动失败请查看本工作树 `logs/workbench/` 下对应服务的 stdout 和 stderr 日志。PaperSeek 数据继续保存在用户目录 `.paperseek/`；GPT Researcher 默认在本工作树的 `data/` 和 `outputs/` 保存报告记录和输出，两者独立。若更改前端端口，后端 CORS 配置也须允许该来源。
