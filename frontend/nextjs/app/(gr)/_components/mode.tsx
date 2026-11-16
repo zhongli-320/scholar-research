@@ -22,7 +22,7 @@ export function useLinks() {
     home: mock ? '/mocks/home' : '/reviews/new',
     archive: mock ? '/mocks/archive' : '/history/reviews',
     reviewHome: mock ? '/mocks/home' : '/reviews/new',
-    searchHistory: mock ? '/mocks/archive' : '/history/searches',
+    searchHistory: mock ? '/mocks/search-history' : '/history/searches',
     reviewHistory: mock ? '/mocks/archive' : '/history/reviews',
     report: (id: string) => (mock ? '/mocks/report' : `/research/${id}`),
   };

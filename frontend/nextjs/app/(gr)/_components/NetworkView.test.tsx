@@ -40,3 +40,23 @@ it('clears errors on a parameter change and on an ID change', async () => {
   await act(async () => root.render(<NetworkView id="b" />)); expect(element.textContent).not.toContain('network error');
   await act(async () => root.unmount());
 });
+
+it('zooms the network view and resets it while preserving the node list', async () => {
+  vi.mocked(buildNetwork).mockReset().mockResolvedValue(result('node'));
+  const element = document.createElement('div'); const root = createRoot(element);
+  await act(async () => root.render(<NetworkView id="a" />));
+  await act(async () => { submit(element); });
+  const svg = element.querySelector('svg[role="img"]')!;
+  const initial = svg.getAttribute('viewBox');
+  const button = (label: string) => [...element.querySelectorAll('button')].find(item => item.getAttribute('aria-label') === label)!;
+  expect(button('放大网络图')).toBeDefined();
+  await act(async () => button('放大网络图').click());
+  expect(svg.getAttribute('viewBox')).not.toBe(initial);
+  const enlarged = svg.getAttribute('viewBox');
+  await act(async () => button('缩小网络图').click());
+  expect(svg.getAttribute('viewBox')).not.toBe(enlarged);
+  await act(async () => button('重置网络图缩放').click());
+  expect(svg.getAttribute('viewBox')).toBe(initial);
+  expect(element.querySelector('[data-network-node]')?.textContent).toContain('node');
+  await act(async () => root.unmount());
+});

@@ -2,6 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react';
 import { getHost } from '@/helpers/getHost';
+import { useMock } from './mode';
 
 export type BackendStatus = 'checking' | 'online' | 'offline';
 
@@ -64,17 +65,20 @@ const subscribe = (listener: () => void) => {
 
 /** Whether the Python backend answers, shared by every component on the page. */
 export function useBackend() {
+  const mock = useMock();
   const snapshot = useSyncExternalStore(subscribe, () => state, () => initial);
 
   useEffect(() => {
-    if (started) return;
+    if (mock || started) return;
     started = true;
     if (new URLSearchParams(window.location.search).get('backend') === 'offline') {
       set({ host: getHost(), status: 'offline' });
       return;
     }
     void check(getHost());
-  }, []);
+  }, [mock]);
 
-  return { ...snapshot, check: () => check(), setHost, upload, remove };
+  const offline = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('backend') === 'offline';
+  const current = mock ? { host: '', status: offline ? 'offline' as const : 'online' as const, documents: [] as string[] } : snapshot;
+  return { ...current, check: () => mock ? Promise.resolve() : check(), setHost: (url: string) => { if (!mock) setHost(url); }, upload: (file: File) => mock ? Promise.resolve() : upload(file), remove: (name: string) => mock ? Promise.resolve() : remove(name) };
 }

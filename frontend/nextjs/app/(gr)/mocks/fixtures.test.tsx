@@ -38,14 +38,15 @@ it('renders the product network and readable node list without a service', async
 });
 
 it('shows keyboard links for both settings systems while disabling mutation controls', async () => {
-  const element = document.createElement('div'); const root = createRoot(element);
+  const element = document.createElement('div'); document.body.appendChild(element); const root = createRoot(element);
   await act(async () => root.render(<FixtureBoundary><Settings searchParams={{}} /></FixtureBoundary>));
   const tabs = [...element.querySelectorAll('nav[aria-label="设置系统"] a')];
   expect(tabs.map(tab => tab.textContent)).toEqual(['PaperSeek', 'GPT Researcher']);
   expect(tabs[1].getAttribute('href')).toBe('/mocks/settings?tab=gpt-researcher');
   expect(tabs.every(tab => tab instanceof HTMLAnchorElement && tab.hasAttribute('href'))).toBe(true);
+  for (const tab of tabs) { (tab as HTMLAnchorElement).focus(); expect(document.activeElement).toBe(tab); }
   expect([...element.querySelectorAll('button, input, select, textarea')].every(control => control.matches(':disabled'))).toBe(true);
-  await act(async () => root.unmount());
+  await act(async () => root.unmount()); element.remove();
 });
 
 it('keeps PaperSeek API writes and GPT Researcher browser preferences independent', async () => {
@@ -61,4 +62,20 @@ it('keeps PaperSeek API writes and GPT Researcher browser preferences independen
   expect(localStorage.getItem('gptr-brief')).not.toBeNull();
   expect(fetcher).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
+});
+
+it('allows only local mock-page navigation requests through the fixture boundary', async () => {
+  vi.stubGlobal('React', React); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  const previous = vi.fn().mockResolvedValue(new Response('mock route'));
+  vi.stubGlobal('fetch', previous);
+  const element = document.createElement('div'); const root = createRoot(element);
+  await act(async () => root.render(<FixtureBoundary><div>preview</div></FixtureBoundary>));
+  const result = await fetch('/mocks/settings?_rsc=sample');
+  expect(await result.text()).toBe('mock route');
+  expect(previous).toHaveBeenCalledOnce();
+  expect((await fetch('/api/paperseek/runs', { method: 'POST' })).status).toBe(403);
+  expect((await fetch('/mocks/settings?_rsc=sample', { method: 'POST' })).status).toBe(403);
+  expect((await fetch('http://other.example/mocks/settings?_rsc=sample')).status).toBe(403);
+  expect(previous).toHaveBeenCalledOnce();
+  await act(async () => root.unmount()); vi.unstubAllGlobals();
 });

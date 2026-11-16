@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useMock } from './mode';
 import { useEffect, useId, useState } from 'react';
 import { DEFAULT_BRIEF, type BriefValue } from '@/lib/research/brief';
 import { MCP_PRESETS, checkMcp } from '@/lib/research/mcp';
@@ -298,13 +299,14 @@ const names = (list: string[]) => (list.length <= 2 ? list.join(' and ') : `${li
 
 /** MCP is set up in Settings; the sentence says it is on, and opens it. */
 function McpClause({ value }: { value: BriefValue }) {
+  const mock = useMock();
   if (!value.mcp_enabled) return null;
   const check = checkMcp(value.mcp_configs);
   if (check.state === 'invalid') {
     return (
       <>
         {' '}
-        <Link href="/settings?tab=gpt-researcher&section=mcp" className="gr-select !text-rubric">
+        <Link href={mock ? '/mocks/settings?tab=gpt-researcher&section=mcp' : '/settings?tab=gpt-researcher&section=mcp'} className="gr-select !text-rubric">
           The MCP config needs fixing
         </Link>
         .
@@ -315,7 +317,7 @@ function McpClause({ value }: { value: BriefValue }) {
     <>
       {' '}
       {check.state === 'empty' ? 'MCP is on, ' : 'Also asks '}
-      <Link href="/settings?tab=gpt-researcher&section=mcp" className="gr-select">
+      <Link href={mock ? '/mocks/settings?tab=gpt-researcher&section=mcp' : '/settings?tab=gpt-researcher&section=mcp'} className="gr-select">
         {check.state === 'empty'
           ? 'with no servers yet'
           : `${names(check.servers.map((s) => MCP_PRESETS.find((p) => p.server.name === s.name)?.label ?? s.name))} over MCP`}

@@ -15,9 +15,15 @@ function FixtureGuard({ children }: { children: React.ReactNode }) {
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = window.fetch;
-    window.fetch = mockResponse;
+    const guarded: typeof fetch = (input, init) => {
+      const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, window.location.href);
+      const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
+      if (method === 'GET' && url.origin === window.location.origin && url.pathname.startsWith('/mocks/') && url.searchParams.has('_rsc')) return previous(input, init);
+      return mockResponse(input, init);
+    };
+    window.fetch = guarded;
     setReady(true);
-    return () => { if (window.fetch === mockResponse) window.fetch = previous; };
+    return () => { if (window.fetch === guarded) window.fetch = previous; };
   }, []);
   useEffect(() => {
     if (!ready || !container.current) return;

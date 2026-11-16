@@ -52,8 +52,8 @@ export default function HomeScreen({
   const canStart = Boolean(question.trim()) && !offline && !starting && !mcpBroken;
 
   useEffect(() => {
-    if (settingsTab) router.push(`/settings?tab=gpt-researcher&section=${settingsTab}`);
-  }, [settingsTab, router]);
+    if (settingsTab) router.push((mock ? '/mocks/settings' : '/settings') + '?tab=gpt-researcher&section=' + settingsTab);
+  }, [settingsTab, router, mock]);
 
   useEffect(() => { if (!mock) reviewDraft = { question, files }; }, [mock, question, files]);
 
@@ -181,7 +181,7 @@ export default function HomeScreen({
           {offline && (
             <p role="alert" className="mt-3 text-[14px] leading-snug text-rubric">
               Cannot reach the backend at {backend.host || 'localhost:8000'}. Start it with <code className="font-code text-[12.5px]">python main.py</code>, or{' '}
-              <Link href="/settings?tab=gpt-researcher&section=backend" className="font-medium underline underline-offset-4">
+              <Link href={mock ? '/mocks/settings?tab=gpt-researcher&section=backend' : '/settings?tab=gpt-researcher&section=backend'} className="font-medium underline underline-offset-4">
                 change the address in Settings
               </Link>
               .

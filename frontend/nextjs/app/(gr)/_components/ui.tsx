@@ -32,7 +32,9 @@ const STARS_TTL = 60 * 60 * 1000;
 /** The repo's star count, cached for an hour because GitHub allows 60 anonymous requests an hour. */
 function useStars() {
   const [stars, setStars] = useState(STARS_FALLBACK);
+  const mock = usePathname().startsWith('/mocks');
   useEffect(() => {
+    if (mock) return;
     try {
       const cached = JSON.parse(localStorage.getItem(STARS_KEY) ?? 'null') as { n: number; at: number } | null;
       if (cached?.n) setStars(cached.n);
@@ -52,7 +54,7 @@ function useStars() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [mock]);
   return stars;
 }
 
@@ -82,10 +84,11 @@ function GitHubStar() {
 /** Which Python backend this browser talks to; the address is changed in Settings. */
 export function Connection() {
   const backend = useBackend();
+  const mock = usePathname().startsWith('/mocks');
   const label = backend.status === 'online' ? bare(backend.host) : backend.status;
   return (
     <Link
-      href="/settings?tab=gpt-researcher&section=backend"
+      href={mock ? '/mocks/settings?tab=gpt-researcher&section=backend' : '/settings?tab=gpt-researcher&section=backend'}
       aria-label={`Backend: ${label}`}
       className={`inline-flex h-8 items-center gap-2.5 font-code text-[11px] tracking-[0.06em] transition-colors ${
         backend.status === 'offline' ? 'text-rubric' : 'text-ink-3 hover:text-ink'
@@ -107,7 +110,10 @@ export function TopBar() {
   const mock = current.startsWith('/mocks');
   const hrefFor = (href: string) => {
     if (!mock) return href;
-    if (href === '/' || href === '/reviews/new') return links.reviewHome;
+    if (href === '/') return '/mocks/literature';
+    if (href === '/bibliometrics') return '/mocks/bibliometrics';
+    if (href === '/reviews/new') return links.reviewHome;
+    if (href === '/settings') return '/mocks/settings';
     if (href === '/history/searches') return links.searchHistory;
     if (href === '/history/reviews') return links.reviewHistory;
     return href;
@@ -120,7 +126,7 @@ export function TopBar() {
   );
   return (
     <header className="sticky top-0 z-40 grid h-16 grid-cols-[1fr_auto] items-center border-b border-rule-soft bg-paper/90 px-5 backdrop-blur md:grid-cols-[1fr_auto_1fr] md:px-8">
-      <Link href={mock ? links.reviewHome : '/'} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[16px] font-semibold tracking-[-0.015em]">
+      <Link href={mock ? '/mocks/literature' : '/'} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[16px] font-semibold tracking-[-0.015em]">
         <span className="gr-mark text-[26px]" aria-hidden="true" />
         GPT Researcher
       </Link>
@@ -132,7 +138,7 @@ export function TopBar() {
             {HISTORY_NAV_ITEMS.map(itemLink)}
           </div>
         </details>
-        <Link href={SETTINGS_HREF} className="hover:text-ink">设置</Link>
+        <Link href={hrefFor(SETTINGS_HREF)} className="hover:text-ink">设置</Link>
       </nav>
       <div className="flex items-center gap-5 justify-self-end">
         <details className="relative text-[14px] font-medium text-ink-2 md:hidden">
@@ -145,7 +151,7 @@ export function TopBar() {
                 {HISTORY_NAV_ITEMS.map(itemLink)}
               </div>
             </details>
-            <Link href={SETTINGS_HREF} onClick={(event) => closeMenuDetails(event.currentTarget)}>设置</Link>
+            <Link href={hrefFor(SETTINGS_HREF)} onClick={(event) => closeMenuDetails(event.currentTarget)}>设置</Link>
           </nav>
         </details>
         <GitHubStar />

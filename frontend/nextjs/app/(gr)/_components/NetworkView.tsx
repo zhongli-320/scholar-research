@@ -7,6 +7,7 @@ import type { PaperSeekMetricNetwork, PaperSeekNetworkParameters } from '@/lib/p
 export default function NetworkView({ id }: { id: string }) {
   const [params, setParams] = useState<PaperSeekNetworkParameters>({ kind: 'keywords', min_occurrences: 2, max_nodes: 100, max_edges: 500, min_weight: 1 });
   const [frequency, setFrequency] = useState('');
+  const [zoom, setZoom] = useState(1);
   const [state, setState] = useState<{ id: string; network: PaperSeekMetricNetwork | null; error: string; busy: boolean }>({ id, network: null, error: '', busy: false });
   const version = useRef(0);
   useEffect(() => { const counter = version; counter.current++; setState({ id, network: null, error: '', busy: false }); return () => { counter.current++; }; }, [id]);
@@ -37,7 +38,8 @@ export default function NetworkView({ id }: { id: string }) {
     {error && <p role="alert" className="mt-4 text-rubric">{error}</p>}
     {network && layout && <div className="mt-5"><p>语料 {network.corpus_count} 篇 · 符合条件的论文 {network.eligible_paper_count} · 显示节点 {network.nodes.length} / 符合条件的节点 {network.eligible_node_count} · 显示连边 {network.edges.length} / 连边总数 {network.total_edge_count} · 排除参考文献 {network.excluded_reference_count}</p>
       {network.warnings?.length > 0 && <div role="status" className="mt-3"><strong>网络提示</strong><ul>{network.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul></div>}
-      <svg className="mt-4 w-full border border-rule" viewBox="0 0 800 500" role="img" aria-label="网络图，节点清单位于图后">
+      <div className="mt-4 flex gap-2"><button className="gr-btn-line min-h-11 min-w-11" type="button" aria-label="放大网络图" onClick={() => setZoom((value) => Math.min(3, value + 0.5))}>＋</button><button className="gr-btn-line min-h-11 min-w-11" type="button" aria-label="缩小网络图" onClick={() => setZoom((value) => Math.max(0.5, value - 0.5))}>－</button><button className="gr-btn-line min-h-11 px-3" type="button" aria-label="重置网络图缩放" onClick={() => setZoom(1)}>重置</button></div>
+      <svg className="mt-4 w-full border border-rule" viewBox={[400 - 400 / zoom, 250 - 250 / zoom, 800 / zoom, 500 / zoom].join(' ')} role="img" aria-label="网络图，节点清单位于图后">
         {layout.edges.map((edge, i) => { const from = positions.get(edge.source), to = positions.get(edge.target); return from && to ? <line key={`${edge.source}-${edge.target}-${i}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="currentColor" strokeOpacity="0.25" /> : null; })}
         {layout.nodes.map((node) => <g key={node.id}><circle cx={node.x} cy={node.y} r={Math.min(14, 4 + Math.sqrt(node.count))} fill="currentColor" /><title>{node.label}: {node.count}</title></g>)}
       </svg>
