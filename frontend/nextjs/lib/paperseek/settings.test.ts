@@ -58,8 +58,8 @@ it('encodes dynamic gateway IDs and omits empty source keys', async () => {
   const { PUT: save } = await import('@/app/api/paperseek/settings/sources/[id]/route');
   const fetcher = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
   vi.stubGlobal('fetch', fetcher);
-  const response = await save(new Request('http://localhost', { method: 'PUT', headers, body: JSON.stringify({ api_key: ' ', options: { openalex_email: 'research@example.org' } }) }), { params: { id: 'a/b' } });
+  const response = await save(new Request('http://localhost', { method: 'PUT', headers, body: JSON.stringify({ api_key: ' ', options: { openalex_email: 'research@example.org' } }) }), { params: { id: 'a b' } });
   expect(response.status).toBe(204);
-  expect(fetcher.mock.calls[0][0]).toContain('/api/v1/settings/sources/a%2Fb');
+  expect(fetcher.mock.calls[0][0]).toContain('/api/v1/settings/sources/a%20b');
   expect(JSON.parse(fetcher.mock.calls[0][1].body)).not.toHaveProperty('api_key');
 });

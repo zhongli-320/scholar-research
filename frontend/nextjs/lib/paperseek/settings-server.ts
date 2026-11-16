@@ -14,9 +14,16 @@ export async function settingsGateway(request: Request, segments: string[], shap
   const url = new URL(request.url);
   if (request.method !== 'GET') {
     const origin = request.headers.get('origin');
-    // Next may build request.url with its internal listening hostname.
+    // Next may use its listening hostname in request.url. Only trust loopback Host values.
     const host = request.headers.get('host') ?? url.host;
-    if (origin !== `${url.protocol}//${host}`) return error(403, 'FORBIDDEN_ORIGIN');
+    const address = `${url.protocol}//${host}`;
+    if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) ||
+        !URL.canParse(address) || origin !== new URL(address).origin) {
+      return error(403, 'FORBIDDEN_ORIGIN');
+    }
+  }
+  if (segments.some(segment => segment === '.' || segment === '..' || /[/\\]/.test(segment))) {
+    return error(400, 'INVALID_REQUEST');
   }
   let body: string | undefined;
   if (request.method === 'PUT' || (request.method === 'POST' && segments.length < 3)) {

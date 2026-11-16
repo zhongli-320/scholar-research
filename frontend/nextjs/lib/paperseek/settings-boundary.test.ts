@@ -26,13 +26,39 @@ describe('settings gateway boundary', () => {
     expect((await create(mutating('http://localhost/api/paperseek/settings/connections', '{}', { Origin: 'http://localhost', 'Content-Type': 'text/plain' }))).status).toBe(415);
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it('uses the browser-facing host when Next supplies an internal request URL', async () => {
+  it.each([
+    ['http://localhost:3000', '127.0.0.1:3000', 'http://127.0.0.1:3000'],
+    ['http://127.0.0.1:3000', 'localhost:3000', 'http://localhost:3000'],
+    ['http://localhost:3000', '[::1]:3000', 'http://[::1]:3000'],
+    ['http://localhost', 'LOCALHOST:80', 'http://localhost'],
+  ])('accepts browser-facing loopback origin %s with Host %s and Origin %s', async (internalUrl, Host, Origin) => {
     setup({ ok: true, code: '', latency_ms: 12 });
-    const request = mutating('http://localhost:3000/api/paperseek/settings/connections/a/test', undefined, {
-      Host: '127.0.0.1:3000', Origin: 'http://127.0.0.1:3000',
-    });
+    const request = mutating(`${internalUrl}/api/paperseek/settings/connections/a/test`, undefined, { Host, Origin });
     expect((await probe(request, { params: { id: 'a' } })).status).toBe(200);
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it.each(['evil.example:3000', 'localhost.evil.example:3000', '192.168.1.10:3000', '[::2]:3000'])(
+    'blocks writes and probes when non-loopback Host and Origin match for %s', async (Host) => {
+      setup({});
+      const headers = { Host, Origin: `http://${Host}` };
+      expect((await create(mutating('http://localhost:3000/api/paperseek/settings/connections', '{}', { ...headers, 'Content-Type': 'application/json' }))).status).toBe(403);
+      expect((await probe(mutating('http://localhost:3000/api/paperseek/settings/connections/a/test', undefined, headers), { params: { id: 'a' } })).status).toBe(403);
+      expect(fetcher).not.toHaveBeenCalled();
+    },
+  );
+  it.each(['https://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'])('requires the exact scheme, port and host of the browser Origin %s', async (Origin) => {
+    setup({});
+    const request = mutating('http://localhost:3000/api/paperseek/settings/connections/a/test', undefined, { Host: 'localhost:3000', Origin });
+    expect((await probe(request, { params: { id: 'a' } })).status).toBe(403);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it.each(['.', '..', 'a/SECRET', 'a\\SECRET', 'a/../SECRET'])('returns a sanitized 400 for invalid decoded path segment %s', async (id) => {
+    setup({ ok: true, code: '', latency_ms: 12 });
+    const request = mutating('http://localhost/api/paperseek/settings/connections/a/test', undefined, { Origin: 'http://localhost' });
+    const response = await probe(request, { params: { id } });
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: { code: 'INVALID_REQUEST', message: 'PaperSeek settings request failed' } });
+    expect(fetcher).not.toHaveBeenCalled();
   });
   it('does not forward a creation request without its required JSON body', async () => {
     setup({});
