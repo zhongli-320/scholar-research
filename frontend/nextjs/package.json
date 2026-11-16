@@ -17,6 +17,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:unit": "vitest run",
     "build:lib": "rollup -c",
     "build:types": "cp src/index.d.ts dist/",
     "dev:lib": "rollup -c -w"
@@ -82,7 +83,8 @@
     "rollup-plugin-typescript2": "^0.31.2",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "@ducanh2912/next-pwa": "^10.0.1"
+    "@ducanh2912/next-pwa": "^10.0.1",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "jsdom": "25.0.1"
