@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createRun, listHistory, listSources, PaperSeekApiError } from '@/lib/paperseek/client';
 import type { PaperSeekRun, PaperSeekSource } from '@/lib/paperseek/types';
 import { Arrow, Eye } from './ui';
@@ -23,16 +23,26 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
   const [problem, setProblem] = useState('');
   const [offline, setOffline] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [sourceError, setSourceError] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     if (mockData) return;
     let active = true;
-    void Promise.all([listSources(), listHistory({ limit: 1 })]).then(([available, history]) => {
+    void listSources().then((available) => {
       if (!active) return;
       setSources(available);
       setSource(available.find((item) => item.default)?.id ?? 'openalex');
-      setRecent(history.items[0] ?? null);
-    }).catch(() => { if (active) setOffline(true); });
+    }).catch(() => { if (active) setSourceError(true); });
+    void listHistory({ limit: 1 }).then((history) => {
+      if (active) setRecent(history.items[0] ?? null);
+    }).catch(() => { if (active) setHistoryError(true); });
     return () => { active = false; };
   }, [mockData]);
 
@@ -50,12 +60,13 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
         ...(selected?.capabilities.citation_expansion ? { citation_enabled: citation } : {}),
         ...(source === 'wos' ? { wos_db: wosDb } : {}),
       });
-      router.push(`/literature/${encodeURIComponent(run.id)}`);
+      if (mounted.current) router.push(`/literature/${encodeURIComponent(run.id)}`);
     } catch (error) {
+      if (!mounted.current) return;
       setOffline(!(error instanceof PaperSeekApiError) || error.status === 503);
       setProblem(error instanceof PaperSeekApiError ? `${error.message} (${error.code})` : '无法连接 PaperSeek，请检查服务。');
     } finally {
-      setStarting(false);
+      if (mounted.current) setStarting(false);
     }
   }
 
@@ -71,6 +82,8 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
           <div className="mt-4 flex justify-end"><button type="submit" className="gr-btn" disabled={Boolean(mockData) || starting || !question.trim()}>{starting ? '正在创建' : '开始检索'} <Arrow /></button></div>
         </div>
         {mockData && <p className="mt-3 text-sm text-ink-3">预览模式：不会提交真实检索。</p>}
+        {sourceError && <p role="alert" className="mt-3 text-sm text-rubric">数据源加载失败，请稍后重试。</p>}
+        {historyError && <p role="alert" className="mt-3 text-sm text-rubric">检索历史加载失败，请稍后重试。</p>}
         {problem && <p role="alert" className="mt-3 text-sm text-rubric">{problem}</p>}
         {offline && <p role="alert" className="mt-3 text-sm text-rubric">PaperSeek 暂不可用，输入内容会保留。请检查服务或前往 <Link href="/settings?tab=paperseek" className="underline underline-offset-4">PaperSeek 设置</Link>。</p>}
         <div className="mt-6 flex flex-wrap gap-x-8 gap-y-4 text-sm">
@@ -84,12 +97,12 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
             {selected?.capabilities.filter.mode === 'text' && <label>{selected.capabilities.filter.label} <input className="ml-2 border border-rule bg-paper-hi p-2" maxLength={500} value={hint} onChange={(event) => setHint(event.target.value)} /></label>}
             {selected?.capabilities.citation_expansion && <label><input type="checkbox" checked={citation} onChange={(event) => setCitation(event.target.checked)} /> 启用引用扩展</label>}
             {source === 'wos' && <label>Web of Science 数据库 <input className="ml-2 border border-rule bg-paper-hi p-2" maxLength={64} value={wosDb} onChange={(event) => setWosDb(event.target.value)} /></label>}
-            {!selected && <span className="text-ink-3">连接 PaperSeek 后可查看高级条件。</span>}
+            {!selected && <span className="text-ink-3">{sourceError ? '数据源加载后可查看高级条件。' : '正在加载高级条件。'}</span>}
           </div>
         </details>
       </form>
       <section className="mt-14 border-t border-rule-soft pt-4" aria-labelledby="default-source"><h2 id="default-source" className="gr-meta">默认数据源</h2><p className="mt-3 text-sm">{defaultSource?.label ?? 'OpenAlex'} · 可在 <Link href="/settings?tab=paperseek" className="underline underline-offset-4">设置</Link> 中修改。</p></section>
-      <section className="mt-12" aria-labelledby="recent-search"><div className="flex items-baseline justify-between border-b border-ink pb-3"><h2 id="recent-search" className="gr-meta">最近检索</h2></div>{recent ? <Link href={`/literature/${encodeURIComponent(recent.id)}`} className="block border-b border-rule-soft py-4 hover:text-rubric"><span className="font-display text-lg font-semibold">{recent.display_title || recent.question}</span><span className="mt-2 block text-sm text-ink-3">{recent.status} · {recent.result_count} 条结果 · {sources.find((item) => item.id === recent.source)?.label ?? recent.source} · 查看 →</span></Link> : <p className="py-4 text-sm text-ink-3">暂无检索记录。</p>}</section>
+      <section className="mt-12" aria-labelledby="recent-search"><div className="flex items-baseline justify-between border-b border-ink pb-3"><h2 id="recent-search" className="gr-meta">最近检索</h2></div>{recent ? <Link href={`/literature/${encodeURIComponent(recent.id)}`} className="block border-b border-rule-soft py-4 hover:text-rubric"><span className="font-display text-lg font-semibold">{recent.display_title || recent.question}</span><span className="mt-2 block text-sm text-ink-3">{recent.status} · {recent.result_count} 条结果 · {sources.find((item) => item.id === recent.source)?.label ?? recent.source} · 查看 →</span></Link> : !historyError && <p className="py-4 text-sm text-ink-3">暂无检索记录。</p>}</section>
     </main>
   );
 }
