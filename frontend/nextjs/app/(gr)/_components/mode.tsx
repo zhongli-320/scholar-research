@@ -19,8 +19,11 @@ export const useMockArchive = () => useContext(Mock);
 export function useLinks() {
   const mock = usePathname().startsWith('/mocks');
   return {
-    home: mock ? '/mocks/home' : '/',
-    archive: mock ? '/mocks/archive' : '/archive',
+    home: mock ? '/mocks/home' : '/reviews/new',
+    archive: mock ? '/mocks/archive' : '/history/reviews',
+    reviewHome: mock ? '/mocks/home' : '/reviews/new',
+    searchHistory: mock ? '/mocks/archive' : '/history/searches',
+    reviewHistory: mock ? '/mocks/archive' : '/history/reviews',
     report: (id: string) => (mock ? '/mocks/report' : `/research/${id}`),
   };
 }

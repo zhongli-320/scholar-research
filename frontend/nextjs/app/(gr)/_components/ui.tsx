@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useBackend } from './backend';
 import { useLinks } from './mode';
-import { SettingsButton } from './Settings';
+import { MAIN_NAV_ITEMS, HISTORY_NAV_ITEMS, SETTINGS_HREF } from './navigation';
 import { openSettings } from './preferences';
 
 export const clock = (seconds: number) => {
@@ -107,46 +107,47 @@ export function Connection() {
 export function TopBar() {
   const current = usePathname();
   const links = useLinks();
-  const navItems = [
-    { href: links.home, label: 'New research', short: 'New' },
-    { href: links.archive, label: 'Archive', short: 'Archive' },
-    { href: 'https://docs.gptr.dev', label: 'Docs', short: 'Docs' },
-  ];
+  const mock = current.startsWith('/mocks');
+  const hrefFor = (href: string) => {
+    if (!mock) return href;
+    if (href === '/' || href === '/reviews/new') return links.reviewHome;
+    if (href === '/history/searches') return links.searchHistory;
+    if (href === '/history/reviews') return links.reviewHistory;
+    return href;
+  };
+  const itemLink = (item: { href: string; label: string }) => (
+    <Link key={item.href} href={hrefFor(item.href)} aria-current={current === hrefFor(item.href) ? 'page' : undefined}
+      className="transition-colors hover:text-ink aria-[current=page]:text-ink aria-[current=page]:underline aria-[current=page]:decoration-rubric aria-[current=page]:underline-offset-4">
+      {item.label}
+    </Link>
+  );
   return (
     <header className="sticky top-0 z-40 grid h-16 grid-cols-[1fr_auto] items-center border-b border-rule-soft bg-paper/90 px-5 backdrop-blur md:grid-cols-[1fr_auto_1fr] md:px-8">
-      <Link href={links.home} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[16px] font-semibold tracking-[-0.015em]">
+      <Link href={mock ? links.reviewHome : '/'} className="inline-flex items-center gap-2.5 whitespace-nowrap text-[16px] font-semibold tracking-[-0.015em]">
         <span className="gr-mark text-[26px]" aria-hidden="true" />
         GPT Researcher
       </Link>
-      <nav className="hidden gap-8 text-[14px] font-medium text-ink-2 md:flex" aria-label="Main">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={current === item.href ? 'page' : undefined}
-            className="transition-colors hover:text-ink aria-[current=page]:text-ink aria-[current=page]:underline aria-[current=page]:decoration-rubric aria-[current=page]:underline-offset-[22px]"
-          >
-            {item.label}
-          </Link>
-        ))}
+      <nav className="hidden items-center gap-6 text-[14px] font-medium text-ink-2 md:flex" aria-label="主导航">
+        {MAIN_NAV_ITEMS.map(itemLink)}
+        <details className="relative">
+          <summary className="cursor-pointer hover:text-ink">历史记录</summary>
+          <div className="absolute right-0 top-full flex min-w-32 flex-col gap-4 border border-rule-soft bg-paper p-4 shadow-lg">
+            {HISTORY_NAV_ITEMS.map(itemLink)}
+          </div>
+        </details>
+        <Link href={SETTINGS_HREF} className="hover:text-ink">设置</Link>
       </nav>
       <div className="flex items-center gap-5 justify-self-end">
-        <nav className="flex gap-5 text-[14px] font-medium text-ink-2 md:hidden" aria-label="Main">
-          {navItems.slice(0, 2).map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={current === item.href ? 'page' : undefined}
-              className="aria-[current=page]:text-ink aria-[current=page]:underline aria-[current=page]:decoration-rubric aria-[current=page]:underline-offset-[6px]"
-            >
-              {item.short}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-1">
-          <SettingsButton />
-          <GitHubStar />
-        </div>
+        <details className="relative text-[14px] font-medium text-ink-2 md:hidden">
+          <summary className="cursor-pointer">菜单</summary>
+          <nav className="absolute right-0 top-full flex min-w-36 flex-col gap-4 border border-rule-soft bg-paper p-4 shadow-lg" aria-label="主导航">
+            {MAIN_NAV_ITEMS.map(itemLink)}
+            <span>历史记录</span>
+            {HISTORY_NAV_ITEMS.map(itemLink)}
+            <Link href={SETTINGS_HREF}>设置</Link>
+          </nav>
+        </details>
+        <GitHubStar />
       </div>
     </header>
   );

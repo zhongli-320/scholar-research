@@ -127,7 +127,7 @@ export default function ResearchScreen({ id }: { id: string }) {
           <button type="button" className="gr-btn" onClick={() => setAttempt((n) => n + 1)}>
             Try again
           </button>
-          <Link href="/archive" className={textLink}>
+          <Link href="/history/reviews" className={textLink}>
             Archive
           </Link>
         </div>
@@ -145,7 +145,7 @@ export default function ResearchScreen({ id }: { id: string }) {
             <button type="button" className="gr-btn" onClick={() => restart(pending.question, pending.brief)}>
               Start again
             </button>
-            <Link href="/" className={textLink}>
+            <Link href="/reviews/new" className={textLink}>
               New research
             </Link>
           </div>
@@ -156,10 +156,10 @@ export default function ResearchScreen({ id }: { id: string }) {
       <Notice eyebrow="Report" title="This report isn't on the backend">
         <p>It may have been deleted, or saved by a different backend.</p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
-          <Link href="/archive" className="gr-btn">
+          <Link href="/history/reviews" className="gr-btn">
             Open the archive
           </Link>
-          <Link href="/" className={textLink}>
+          <Link href="/reviews/new" className={textLink}>
             New research
           </Link>
         </div>
