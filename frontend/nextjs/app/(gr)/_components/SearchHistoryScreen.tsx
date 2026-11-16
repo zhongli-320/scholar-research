@@ -24,12 +24,13 @@ export default function SearchHistoryScreen() {
   async function load(search: string, pages: (string | undefined)[]) {
     const id = ++requestId.current;
     setLoading(true); setError(''); setNext(null); setConfirmId(null); setEditId(null);
+    setQuery(search); setCursors(pages); setItems([]);
     try {
       const cursor = pages[pages.length - 1];
       const page = await listHistory({ ...(search ? { query: search } : {}), ...(cursor ? { cursor } : {}) });
       if (id !== requestId.current) return;
       setItems(page.items.filter((item) => !item.kind || item.kind === 'research'));
-      setNext(page.next_cursor); setCursors(pages); setQuery(search);
+      setNext(page.next_cursor);
     } catch (err) {
       if (id === requestId.current) { setItems([]); setError(err instanceof Error ? err.message : '历史加载失败'); }
     } finally { if (id === requestId.current) setLoading(false); }

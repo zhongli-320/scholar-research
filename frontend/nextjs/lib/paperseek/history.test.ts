@@ -27,3 +27,11 @@ it('accepts a 202 deletion receipt and encodes the id', async () => {
   await expect(deleteSearch('a/b')).resolves.toBeUndefined();
   expect(fetcher).toHaveBeenCalledWith('/api/paperseek/history/a%2Fb', { method: 'DELETE' });
 });
+
+it('compares microsecond timestamps before applying stable tie order', () => {
+  const earlier = item('earlier', '2026-01-02T00:00:00.123100Z');
+  const later = item('later', '2026-01-02T00:00:00.123900Z');
+  expect(latestSearch([earlier, later])).toBe(later);
+  expect(latestSearch([later, item('tie', '2026-01-02T00:00:00.123900Z')])).toBe(later);
+  expect(latestSearch([later, item('offset', '2026-01-02T08:00:00.123901+08:00')])?.id).toBe('offset');
+});

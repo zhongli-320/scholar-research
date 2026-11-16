@@ -44,3 +44,19 @@ it('ignores an older page response after a new query', async () => {
   expect(vi.mocked(listHistory).mock.calls.at(-1)?.[0]).toEqual({ query: 'new', cursor: 'new-cursor' });
   await act(async () => root.unmount());
 });
+
+it('clears the old cursor session immediately when a new query fails', async () => {
+  vi.mocked(listHistory).mockReset().mockResolvedValueOnce({ items: [], next_cursor: 'old-next', matched_count: 0 }).mockResolvedValueOnce({ items: [], next_cursor: 'old-next-2', matched_count: 0 }).mockRejectedValueOnce(new Error('offline'));
+  const container = document.createElement('div'); const root = createRoot(container);
+  await act(async () => root.render(<SearchHistoryScreen />));
+  const button = (label: string) => [...container.querySelectorAll('button')].find((b) => b.textContent === label)!;
+  await act(async () => button('下一页').click());
+  const input = container.querySelector('input')!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'new'); input.dispatchEvent(new Event('input', { bubbles: true })); });
+  await act(async () => container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(container.textContent).toContain('offline');
+  expect(button('上一页').disabled).toBe(true);
+  expect(button('下一页').disabled).toBe(true);
+  expect(vi.mocked(listHistory).mock.calls.at(-1)?.[0]).toEqual({ query: 'new' });
+  await act(async () => root.unmount());
+});

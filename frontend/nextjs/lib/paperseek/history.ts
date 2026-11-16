@@ -4,7 +4,13 @@ import type { PaperSeekHistoryItem } from './types';
 export function latestSearch(items: PaperSeekHistoryItem[]): PaperSeekHistoryItem | null {
   return items.reduce<PaperSeekHistoryItem | null>((latest, item) => {
     if (item.kind && item.kind !== 'research') return latest;
-    return !latest || Date.parse(item.created_at) > Date.parse(latest.created_at) ? item : latest;
+    if (!latest) return item;
+    const difference = Date.parse(item.created_at) - Date.parse(latest.created_at);
+    if (difference !== 0) return difference > 0 ? item : latest;
+    const fraction = (value: string) => value.match(/\.(\d+)(?:Z|[+-]\d\d:?\d\d)?$/i)?.[1] ?? '';
+    const a = fraction(item.created_at); const b = fraction(latest.created_at);
+    const length = Math.max(a.length, b.length);
+    return a.padEnd(length, '0') > b.padEnd(length, '0') ? item : latest;
   }, null);
 }
 
