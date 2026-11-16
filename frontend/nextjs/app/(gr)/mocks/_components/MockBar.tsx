@@ -3,6 +3,11 @@
 import { usePathname, useSearchParams } from 'next/navigation';
 
 const screens = [
+  { href: '/mocks/literature', label: '文献检索' },
+  { href: '/mocks/results', label: '检索结果' },
+  { href: '/mocks/search-history', label: '检索历史' },
+  { href: '/mocks/bibliometrics', label: '文献计量' },
+  { href: '/mocks/settings', label: '设置' },
   { href: '/mocks/home', label: 'Home' },
   { href: '/mocks/home?open=report_type', label: 'Brief' },
   { href: '/mocks/home?open=domains', label: 'Sites' },

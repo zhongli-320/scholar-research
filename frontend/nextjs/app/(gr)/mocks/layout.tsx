@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { MockMode } from '../_components/mode';
 import MockBar from './_components/MockBar';
+import FixtureBoundary from './_components/FixtureBoundary';
 import { archive } from './_data/archive';
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 export default function MocksLayout({ children }: { children: React.ReactNode }) {
   return (
     <MockMode archive={archive}>
-      {children}
+      <FixtureBoundary>{children}</FixtureBoundary>
       <Suspense>
         <MockBar />
       </Suspense>
