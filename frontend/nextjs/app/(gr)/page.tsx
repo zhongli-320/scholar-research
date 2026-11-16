@@ -1,5 +1,5 @@
-import HomeScreen from './_components/HomeScreen';
+import LiteratureHome from './_components/LiteratureHome';
 
 export default function Page() {
-  return <HomeScreen />;
+  return <LiteratureHome />;
 }
