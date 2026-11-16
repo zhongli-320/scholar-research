@@ -14,7 +14,7 @@ export async function paperseekRequest(request: Request, path: string, init: Req
     throw new Error('Invalid PaperSeek path');
   }
   if (!(pathname === '/ready' || pathname.startsWith('/api/v1/')) ||
-      /[\x00-\x1f\x7f\\#]/.test(path) || decoded.includes('\\') || decoded.split('/').some((segment) => segment === '.' || segment === '..')) {
+      /[\x00-\x20\x7f\\#]/.test(path) || decoded.includes('\\') || decoded.split('/').some((segment) => segment === '.' || segment === '..')) {
     throw new Error('Invalid PaperSeek path');
   }
 

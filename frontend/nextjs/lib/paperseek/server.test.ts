@@ -22,7 +22,7 @@ describe('PaperSeek gateway', () => {
   it('rejects external URLs and traversal paths before fetching', async () => {
     const fetch = vi.fn();
     vi.stubGlobal('fetch', fetch);
-    for (const path of ['https://evil.example', '../settings', '/api/v1/../settings', '/api/v1/%2e%2e/settings', '/api/v1/%5c..%5csettings', '/api/v1/\n../settings', '/other']) {
+    for (const path of ['https://evil.example', '../settings', '/api/v1/../settings', '/api/v1/%2e%2e/settings', '/api/v1/%5c..%5csettings', '/api/v1/\n../settings', '/api/v1/.. ', '/other']) {
       await expect(paperseekRequest(new Request('http://localhost'), path)).rejects.toThrow();
     }
     expect(fetch).not.toHaveBeenCalled();
@@ -30,8 +30,12 @@ describe('PaperSeek gateway', () => {
     expect(() => paperseekPath('..')).toThrow();
   });
 
-  it('encodes dynamic path segments', () => {
-    expect(paperseekPath('runs', 'id/with space')).toBe('/api/v1/runs/id%2Fwith%20space');
+  it('encodes dynamic path segments and accepts encoded spaces', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response('ok'));
+    vi.stubGlobal('fetch', fetch);
+    const path = paperseekPath('runs', 'id/with space');
+    expect(path).toBe('/api/v1/runs/id%2Fwith%20space');
+    expect((await paperseekRequest(new Request('http://localhost'), path)).status).toBe(200);
   });
 
   it('returns a stable 503 when the service cannot be reached', async () => {
