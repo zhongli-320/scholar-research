@@ -27,3 +27,21 @@ it('disables paging during requests and discards the previous filter cursor', as
   expect(vi.mocked(getResults).mock.calls[2][1]).toMatchObject({ query: 'new', cursor: 'new-cursor' });
   await act(async () => root.unmount());
 });
+it('keeps the displayed page and cursor stack if the next page fails, then retries it', async () => {
+  vi.clearAllMocks();
+  vi.mocked(getResults).mockResolvedValueOnce(page('next')).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ ...page(null), matched_count: 1 }).mockResolvedValueOnce(page('next'));
+  const container = document.createElement('div'); const root = createRoot(container);
+  await act(async () => root.render(<LiteratureResults id="a" />));
+  const button = (text: string) => Array.from(container.querySelectorAll('button')).find((item) => item.textContent === text)!;
+  await act(async () => button('下一页').click());
+  expect(container.textContent).toContain('共 2 条'); expect(button('上一页').disabled).toBe(true);
+  expect(button('重试结果')).toBeTruthy();
+  await act(async () => button('重试结果').click());
+  expect(vi.mocked(getResults).mock.calls[2][1]).toMatchObject({ cursor: 'next' });
+  expect(container.textContent).toContain('匹配 1 条');
+  expect(container.querySelector('[role=alert]')).toBeNull();
+  expect(button('上一页').disabled).toBe(false);
+  await act(async () => button('上一页').click());
+  expect(vi.mocked(getResults).mock.calls[3][1]).toMatchObject({ cursor: undefined });
+  await act(async () => root.unmount());
+});
