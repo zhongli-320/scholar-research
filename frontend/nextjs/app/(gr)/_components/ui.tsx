@@ -142,8 +142,12 @@ export function TopBar() {
           <summary className="cursor-pointer">菜单</summary>
           <nav className="absolute right-0 top-full flex min-w-36 flex-col gap-4 border border-rule-soft bg-paper p-4 shadow-lg" aria-label="主导航">
             {MAIN_NAV_ITEMS.map(itemLink)}
-            <span>历史记录</span>
-            {HISTORY_NAV_ITEMS.map(itemLink)}
+            <details>
+              <summary className="cursor-pointer hover:text-ink">历史记录</summary>
+              <div className="mt-4 flex flex-col gap-4 pl-4">
+                {HISTORY_NAV_ITEMS.map(itemLink)}
+              </div>
+            </details>
             <Link href={SETTINGS_HREF}>设置</Link>
           </nav>
         </details>
