@@ -41,6 +41,14 @@ $services = @(
     @{ Name='Next.js'; Port=$FrontendPort; Url="http://127.0.0.1:$FrontendPort/" }
 )
 if (@($services.Port | Select-Object -Unique).Count -ne 3) { throw 'Service ports must be distinct.' }
+# One local lock covers overlapping port selections as well as identical ones.
+$mutex = $null
+$locked = $false
+try {
+    if (-not $CheckOnly) {
+        $mutex = New-Object System.Threading.Mutex($false, 'Local\ResearchWorkbenchLauncher-1e957e45')
+        try { $locked = $mutex.WaitOne() } catch [System.Threading.AbandonedMutexException] { $locked = $true }
+    }
 foreach ($service in $services) {
     $service.Action = Resolve-ServiceAction (Test-Ready $service) (Test-PortOpen $service.Port)
     Write-Output "$($service.Name) port $($service.Port): $($service.Action)"
@@ -50,39 +58,35 @@ if ($services[1].Action -eq 'reuse' -and $FrontendPort -ne 3000) { Write-Warning
 if ($services[2].Action -eq 'reuse') { Write-Warning 'Reused frontend: verify its configured backend and PaperSeek ports match the selected ports.' }
 if ($CheckOnly) { return }
 
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$commonDir = (& git -C $root rev-parse --git-common-dir)
-if ($LASTEXITCODE -ne 0) { throw 'Cannot locate the main repository.' }
-if (-not [System.IO.Path]::IsPathRooted($commonDir)) { $commonDir = Join-Path $root $commonDir }
-$mainRepo = Split-Path (Resolve-Path -LiteralPath $commonDir).Path
-$paperDir = (Resolve-Path (Join-Path (Split-Path $mainRepo) 'paperseek')).Path
-$paperPython = (Resolve-Path (Join-Path $paperDir '.venv\Scripts\python.exe')).Path
-$backendPython = (Resolve-Path (Join-Path $mainRepo '.venv\Scripts\python.exe')).Path
-$frontDir = (Resolve-Path (Join-Path $root 'frontend\nextjs')).Path
-$npm = (Get-Command npm.cmd -ErrorAction Stop).Source
-$logDir = Join-Path $root 'logs\workbench'
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+if (-not @($services | Where-Object Action -eq 'start').Count) { return }
 $env:PAPERSEEK_API_URL = "http://127.0.0.1:$PaperSeekPort"
 $env:NEXT_PUBLIC_GPTR_API_URL = "http://127.0.0.1:$BackendPort"
 $env:NEXT_PUBLIC_BACKEND_URL = $env:NEXT_PUBLIC_GPTR_API_URL
 $env:WORKBENCH_FRONTEND_ORIGIN = "http://127.0.0.1:$FrontendPort"
-$envFile = Join-Path $root '.env'
-if (-not (Test-Path -LiteralPath $envFile)) { $envFile = Join-Path $mainRepo '.env' }
 foreach ($service in $services) {
     if ($service.Action -eq 'reuse') { continue }
     # Recheck immediately before launching in case another process claimed the port.
     $action = Resolve-ServiceAction (Test-Ready $service) (Test-PortOpen $service.Port)
     if ($action -eq 'reuse') { Write-Output "$($service.Name): reuse"; continue }
     if ($action -eq 'blocked') { throw "$($service.Name) port $($service.Port) is occupied; no process was stopped." }
+    $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+    if ($service.Name -ne 'Next.js') {
+        $commonDir = (& git -C $root rev-parse --git-common-dir)
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot locate the main repository.' }
+        if (-not [System.IO.Path]::IsPathRooted($commonDir)) { $commonDir = Join-Path $root $commonDir }
+        $mainRepo = Split-Path (Resolve-Path -LiteralPath $commonDir).Path
+    }
     switch ($service.Name) {
-        'PaperSeek' { $exe = $paperPython; $arguments = "-m paperseek_community.cli serve --port $PaperSeekPort"; $working = $paperDir; $logName = 'paperseek' }
+        'PaperSeek' { $paperDir = (Resolve-Path (Join-Path (Split-Path $mainRepo) 'paperseek')).Path; $exe = (Resolve-Path (Join-Path $paperDir '.venv\Scripts\python.exe')).Path; $arguments = "-m paperseek_community.cli serve --port $PaperSeekPort"; $working = $paperDir; $logName = 'paperseek' }
         'GPT Researcher' {
-            $exe = $backendPython; $arguments = "-m uvicorn backend.server.app:app --host 127.0.0.1 --port $BackendPort --app-dir `"$root`""
+            $exe = (Resolve-Path (Join-Path $mainRepo '.venv\Scripts\python.exe')).Path; $envFile = Join-Path $root '.env'; if (-not (Test-Path -LiteralPath $envFile)) { $envFile = Join-Path $mainRepo '.env' }; $arguments = "-m uvicorn backend.server.app:app --host 127.0.0.1 --port $BackendPort --app-dir `"$root`""
             if (Test-Path -LiteralPath $envFile) { $arguments += ' --env-file "' + $envFile + '"' }
             $working = $mainRepo; $logName = 'backend'
         }
-        'Next.js' { $exe = $env:ComSpec; $arguments = '/d /c ""' + $npm + '" run dev -- -H 127.0.0.1 -p ' + $FrontendPort + '"'; $working = $frontDir; $logName = 'frontend' }
+        'Next.js' { $frontDir = (Resolve-Path (Join-Path $root 'frontend\nextjs')).Path; $npm = (Get-Command npm.cmd -ErrorAction Stop).Source; $exe = $env:ComSpec; $arguments = '/d /c ""' + $npm + '" run dev -- -H 127.0.0.1 -p ' + $FrontendPort + '"'; $working = $frontDir; $logName = 'frontend' }
     }
+    $logDir = Join-Path $root 'logs\workbench'
+    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
     $stdout = Join-Path $logDir "$logName.stdout.log"
     $stderr = Join-Path $logDir "$logName.stderr.log"
     try {
@@ -97,3 +101,7 @@ foreach ($service in $services) {
     Write-Output "$($service.Name): ready"
 }
 Write-Output "Workbench: http://127.0.0.1:$FrontendPort/"
+} finally {
+    if ($locked) { $mutex.ReleaseMutex() }
+    if ($mutex) { $mutex.Dispose() }
+}

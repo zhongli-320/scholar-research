@@ -67,3 +67,39 @@ $blocked = $false
 try { & ([scriptblock]::Create($mocked)) | Out-Null } catch { if ($_ -match 'occupied port') { $blocked = $true } else { throw } }
 if (-not $blocked) { throw 'Blocked scenario did not abort' }
 Write-Output 'Probe and early-exit tests passed'
+$reuseSource = $source.Replace($probeReady, 'function Test-Ready($service) { return $true }').Replace($probePort, 'function Test-PortOpen([int]$Port) { return $true }')
+& ([scriptblock]::Create($reuseSource)) | Out-Null
+Write-Output 'Full reuse requires no local dependencies'
+$script:started = $false
+$script:logCreations = 0
+$partialSource = $source.Replace($probeReady, 'function Test-Ready($service) { if ($service.Name -eq "Next.js") { return $script:started }; return $true }').Replace($probePort, 'function Test-PortOpen([int]$Port) { return $false }').Replace('$PSScriptRoot', "'" + $PSScriptRoot.Replace("'", "''") + "'")
+function Resolve-Path { param($Path, $LiteralPath) $target = if ($LiteralPath) { $LiteralPath } else { $Path }; if ($target -match '[\\/]paperseek[\\/]*$|[\\/]\.venv[\\/]') { throw 'Unused dependency resolved' }; Microsoft.PowerShell.Management\Resolve-Path -LiteralPath $target }
+function New-Item { $script:logCreations++ }
+function Start-Process { $script:started = $true }
+function Start-Sleep { }
+& ([scriptblock]::Create($partialSource)) | Out-Null
+if (-not $script:started -or $script:logCreations -ne 1) { throw 'Partial reuse failed to start only the missing service' }
+Write-Output 'Partial reuse ignores unrelated dependencies'
+$shared = [hashtable]::Synchronized(@{ Ready=$false; Starts=0; Logs=0; Entered=(New-Object System.Threading.ManualResetEvent($false)) })
+$concurrentSource = $source.Replace($probeReady, 'function Test-Ready($service) { if ($service.Name -eq "Next.js") { return $shared.Ready }; return $true }').Replace($probePort, 'function Test-PortOpen([int]$Port) { return $false }').Replace('$PSScriptRoot', "'" + $PSScriptRoot.Replace("'", "''") + "'")
+$wrapper = @'
+param($code, $shared)
+function New-Item { $shared.Logs++ }
+function Start-Process { $shared.Starts++; $shared.Entered.Set() | Out-Null; [System.Threading.Thread]::Sleep(1000); $shared.Ready = $true }
+function Start-Sleep { }
+& ([scriptblock]::Create($code)) | Out-Null
+'@
+$first = [powershell]::Create().AddScript($wrapper).AddArgument($concurrentSource).AddArgument($shared)
+$second = [powershell]::Create().AddScript($wrapper).AddArgument($concurrentSource).AddArgument($shared)
+try {
+    $run1 = $first.BeginInvoke()
+    if (-not $shared.Entered.WaitOne(10000)) { throw 'First launcher did not enter simulated start' }
+    $run2 = $second.BeginInvoke()
+    [System.Threading.Thread]::Sleep(200)
+    if ($run2.IsCompleted) { throw 'Second launcher did not wait for mutex' }
+    $first.EndInvoke($run1) | Out-Null
+    $second.EndInvoke($run2) | Out-Null
+    if ($first.HadErrors -or $second.HadErrors) { throw 'Concurrent simulated launcher failed' }
+    if ($shared.Starts -ne 1 -or $shared.Logs -ne 1) { throw 'Concurrent launch duplicated a start or log creation' }
+} finally { $first.Dispose(); $second.Dispose(); $shared.Entered.Dispose() }
+Write-Output 'Concurrent launchers serialize and reuse'
