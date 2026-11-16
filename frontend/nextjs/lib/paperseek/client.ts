@@ -62,8 +62,8 @@ export async function exportSelected(id: string, format: string, uids: string[])
 }
 
 const analysisPath = (id: string) => `/api/paperseek/bibliometrics/${encodeURIComponent(id)}`;
-export async function createAnalysis(input: { source_run_id: string; title: string }): Promise<import('./types').PaperSeekAnalysis> {
-  return read(await fetch('/api/paperseek/bibliometrics', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ source_run_id: input.source_run_id, title: input.title }) }));
+export async function createAnalysis(input: { source_run_id: string; title: string }, idempotencyKey = crypto.randomUUID()): Promise<import('./types').PaperSeekAnalysis> {
+  return read(await fetch('/api/paperseek/bibliometrics', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ source_run_id: input.source_run_id, title: input.title }) }));
 }
 export async function listAnalyses(params: { q?: string; offset?: number; limit?: number } = {}): Promise<import('./types').PaperSeekAnalysisPage> {
   const query = new URLSearchParams();
