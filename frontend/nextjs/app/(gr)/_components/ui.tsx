@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useBackend } from './backend';
 import { useLinks } from './mode';
-import { MAIN_NAV_ITEMS, HISTORY_NAV_ITEMS, SETTINGS_HREF } from './navigation';
+import { MAIN_NAV_ITEMS, HISTORY_NAV_ITEMS, SETTINGS_HREF, closeMenuDetails } from './navigation';
 import { openSettings } from './preferences';
 
 export const clock = (seconds: number) => {
@@ -116,7 +116,7 @@ export function TopBar() {
     return href;
   };
   const itemLink = (item: { href: string; label: string }) => (
-    <Link key={item.href} href={hrefFor(item.href)} aria-current={current === hrefFor(item.href) ? 'page' : undefined}
+    <Link key={item.href} href={hrefFor(item.href)} onClick={(event) => closeMenuDetails(event.currentTarget)} aria-current={current === hrefFor(item.href) ? 'page' : undefined}
       className="transition-colors hover:text-ink aria-[current=page]:text-ink aria-[current=page]:underline aria-[current=page]:decoration-rubric aria-[current=page]:underline-offset-4">
       {item.label}
     </Link>
@@ -148,7 +148,7 @@ export function TopBar() {
                 {HISTORY_NAV_ITEMS.map(itemLink)}
               </div>
             </details>
-            <Link href={SETTINGS_HREF}>设置</Link>
+            <Link href={SETTINGS_HREF} onClick={(event) => closeMenuDetails(event.currentTarget)}>设置</Link>
           </nav>
         </details>
         <GitHubStar />

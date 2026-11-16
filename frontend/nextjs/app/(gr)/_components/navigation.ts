@@ -8,3 +8,11 @@ export const HISTORY_NAV_ITEMS = [
   { label: '综述历史', href: '/history/reviews' },
 ];
 export const SETTINGS_HREF = '/settings';
+
+export function closeMenuDetails(link: HTMLElement) {
+  let details = link.closest('details');
+  while (details) {
+    details.open = false;
+    details = details.parentElement?.closest('details') ?? null;
+  }
+}

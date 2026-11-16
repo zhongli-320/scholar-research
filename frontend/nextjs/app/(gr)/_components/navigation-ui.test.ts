@@ -3,6 +3,7 @@ import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { TopBar } from './ui';
+import { closeMenuDetails } from './navigation';
 
 vi.stubGlobal('React', React);
 vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
@@ -17,4 +18,11 @@ describe('mobile navigation', () => {
     expect(Array.from(history?.querySelectorAll('a') ?? [], (link) => link.getAttribute('href')))
       .toEqual(['/history/searches', '/history/reviews']);
   });
+});
+
+it('closes all disclosure ancestors after following a menu link', () => {
+  const document = new JSDOM('<details open><nav><details open><a href="/history/reviews">综述历史</a></details></nav></details>').window.document;
+  const link = document.querySelector('a')!;
+  closeMenuDetails(link);
+  expect(Array.from(document.querySelectorAll('details'), (details) => details.open)).toEqual([false, false]);
 });
