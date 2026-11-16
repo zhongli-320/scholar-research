@@ -12,6 +12,7 @@ describe('literature home preview', () => {
     const html = renderToStaticMarkup(React.createElement(LiteratureHome, { mockData: { sources, recent } }));
     expect(html.match(/人工智能与科学研究/g)).toHaveLength(1);
     expect(html).not.toContain('下一步');
+    expect(html).not.toContain('查看全部');
     expect(html).toMatch(/<button type="submit"[^>]*disabled/);
     expect(html).toContain('预览模式');
   });
