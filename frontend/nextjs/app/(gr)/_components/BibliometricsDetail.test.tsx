@@ -41,3 +41,23 @@ it('isolates coupling-only frequency and orders nodes by incident edge weight', 
   for (const text of ['符合条件的论文 2', '显示节点 4', '符合条件的节点 4', '显示连边 2', '连边总数 2', '排除参考文献 7']) expect(element.textContent).toContain(text);
   await act(async () => root.unmount());
 });
+
+it('isolates detail state across IDs and ignores late responses', async () => {
+  const detail = (id: string) => ({ id, title: `Title ${id}`, source_run_id: id, paper_count: 1, scope: 'retrieved_candidates', warnings: [], statistics: { paper_count: 1, citation_sum: 0, years: [], venues: [], providers: [], authors: [], institutions: [], countries: [], keywords: [], coverage: [], jcr_quartiles: [], cas_tiers: [], ccf_ranks: [], ranked_venues: [] } }) as never;
+  let resolveOld!: (value: never) => void;
+  vi.mocked(getAnalysis).mockReset().mockResolvedValueOnce(detail('first')).mockReturnValueOnce(new Promise((resolve) => { resolveOld = resolve; })).mockResolvedValueOnce(detail('third'));
+  const element = document.createElement('div'); const root = createRoot(element);
+  await act(async () => root.render(<BibliometricsDetail id="first" />)); expect(element.textContent).toContain('Title first');
+  await act(async () => root.render(<BibliometricsDetail id="second" />));
+  expect(element.textContent).not.toContain('Title first'); expect(element.querySelector('form')).toBeNull(); expect(element.querySelector('a[href*="export"]')).toBeNull();
+  await act(async () => root.render(<BibliometricsDetail id="third" />)); expect(element.textContent).toContain('Title third');
+  await act(async () => resolveOld(detail('second'))); expect(element.textContent).toContain('Title third'); expect(element.textContent).not.toContain('Title second');
+  await act(async () => root.unmount());
+});
+it('clears an error when switching to another analysis', async () => {
+  vi.mocked(getAnalysis).mockReset().mockRejectedValueOnce(new Error('old error')).mockResolvedValueOnce({ id: 'new', title: 'New analysis', source_run_id: 'new', scope: 'retrieved_candidates', warnings: [], statistics: { paper_count: 1, citation_sum: 0, years: [], venues: [], providers: [], authors: [], institutions: [], countries: [], keywords: [], coverage: [], jcr_quartiles: [], cas_tiers: [], ccf_ranks: [], ranked_venues: [] } } as never);
+  const element = document.createElement('div'); const root = createRoot(element);
+  await act(async () => root.render(<BibliometricsDetail id="old" />)); expect(element.textContent).toContain('old error');
+  await act(async () => root.render(<BibliometricsDetail id="new" />)); expect(element.textContent).toContain('New analysis'); expect(element.textContent).not.toContain('old error');
+  await act(async () => root.unmount());
+});

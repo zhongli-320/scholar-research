@@ -6,9 +6,15 @@ import type { MetricBucket, PaperSeekAnalysis } from '@/lib/paperseek/types';
 import NetworkView from './NetworkView';
 
 export default function BibliometricsDetail({ id }: { id: string }) {
-  const [analysis, setAnalysis] = useState<PaperSeekAnalysis | null>(null); const [error, setError] = useState('');
-  useEffect(() => { let active = true; getAnalysis(id).then((result) => { if (active) setAnalysis(result); }).catch((e) => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
-  if (error) return <main className="mx-auto max-w-[860px] p-8"><p role="alert">{error}</p><Link href="/bibliometrics">返回文献计量</Link></main>;
+  const [state, setState] = useState<{ id: string; analysis?: PaperSeekAnalysis; error?: string }>({ id });
+  useEffect(() => {
+    let active = true; setState({ id });
+    getAnalysis(id).then((analysis) => { if (active) setState({ id, analysis }); }).catch((e) => { if (active) setState({ id, error: e instanceof Error ? e.message : '加载失败' }); });
+    return () => { active = false; };
+  }, [id]);
+  if (state.id !== id) return <main className="mx-auto max-w-[860px] p-8">正在加载分析…</main>;
+  if (state.error) return <main className="mx-auto max-w-[860px] p-8"><p role="alert">{state.error}</p><Link href="/bibliometrics">返回文献计量</Link></main>;
+  const analysis = state.analysis;
   if (!analysis) return <main className="mx-auto max-w-[860px] p-8">正在加载分析…</main>;
   const s = analysis.statistics;
   const groups: [string, MetricBucket[], string?][] = [['年份', s.years, 'year'], ['期刊和来源', s.venues, 'venue'], ['数据提供方', s.providers, 'provider'], ['文献类型', s.document_types, 'document_types'], ['作者', s.authors, 'authors'], ['机构', s.institutions, 'institutions'], ['国家', s.countries, 'countries'], ['关键词', s.keywords, 'keywords'], ['关键词来源', s.keyword_sources, 'keyword_source'], ['引用来源', s.citation_sources, 'citation_source'], ['中科院分区', s.cas_tiers], ['JCR 分区', s.jcr_quartiles], ['CCF 等级', s.ccf_ranks]];

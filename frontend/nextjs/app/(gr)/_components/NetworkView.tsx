@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { buildNetwork } from '@/lib/paperseek/client';
 import { layoutNetwork } from '@/lib/paperseek/network';
 import type { PaperSeekMetricNetwork, PaperSeekNetworkParameters } from '@/lib/paperseek/types';
@@ -7,11 +7,21 @@ import type { PaperSeekMetricNetwork, PaperSeekNetworkParameters } from '@/lib/p
 export default function NetworkView({ id }: { id: string }) {
   const [params, setParams] = useState<PaperSeekNetworkParameters>({ kind: 'keywords', min_occurrences: 2, max_nodes: 100, max_edges: 500, min_weight: 1 });
   const [frequency, setFrequency] = useState('');
-  const [network, setNetwork] = useState<PaperSeekMetricNetwork | null>(null); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
+  const [state, setState] = useState<{ id: string; network: PaperSeekMetricNetwork | null; error: string; busy: boolean }>({ id, network: null, error: '', busy: false });
+  const version = useRef(0);
+  useEffect(() => { const counter = version; counter.current++; setState({ id, network: null, error: '', busy: false }); return () => { counter.current++; }; }, [id]);
+  const current = state.id === id ? state : { id, network: null, error: '', busy: false };
+  const { network, error, busy } = current;
+  function invalidate() { version.current++; setState({ id, network: null, error: '', busy: false }); }
   async function submit() {
-    setBusy(true); setError('');
-    try { setNetwork(await buildNetwork(id, { ...params, ...(params.kind === 'coupling' && frequency ? { max_reference_frequency: Number(frequency) } : {}) })); }
-    catch (e) { setError(e instanceof Error ? e.message : '网络生成失败'); } finally { setBusy(false); }
+    const requestVersion = ++version.current;
+    setState({ id, network: null, error: '', busy: true });
+    try {
+      const network = await buildNetwork(id, { ...params, ...(params.kind === 'coupling' && frequency ? { max_reference_frequency: Number(frequency) } : {}) });
+      if (version.current === requestVersion) setState({ id, network, error: '', busy: false });
+    } catch (e) {
+      if (version.current === requestVersion) setState({ id, network: null, error: e instanceof Error ? e.message : '网络生成失败', busy: false });
+    }
   }
   const layout = network ? layoutNetwork(network, 800, 500) : null;
   const positions = new Map(layout?.nodes.map((node) => [node.id, node]));
@@ -19,9 +29,9 @@ export default function NetworkView({ id }: { id: string }) {
   network?.edges.forEach((edge) => { weights.set(edge.source, (weights.get(edge.source) ?? 0) + edge.weight); if (edge.target !== edge.source) weights.set(edge.target, (weights.get(edge.target) ?? 0) + edge.weight); });
   return <section className="mt-12"><h2 className="font-display text-2xl">网络分析</h2>
     <form className="mt-4 flex flex-wrap items-end gap-4" onSubmit={(event) => { event.preventDefault(); if (!busy) void submit(); }}>
-      <label>网络类型<select className="block border border-rule bg-paper-hi p-2" value={params.kind} onChange={(event) => setParams({ ...params, kind: event.target.value as 'keywords' | 'coupling' })}><option value="keywords">关键词共现</option><option value="coupling">文献耦合</option></select></label>
-      {([['min_occurrences', '最少出现次数', 1, 10000], ['min_weight', '最小边权重', 1, 10000], ['max_nodes', '最多节点', 10, 300], ['max_edges', '最多连边', 10, 2000]] as const).map(([key, label, min, max]) => <label key={key}>{label}<input className="block w-24 border border-rule bg-paper-hi p-2" type="number" required min={min} max={max} value={params[key] ?? ''} onChange={(event) => setParams({ ...params, [key]: Number(event.target.value) })} /></label>)}
-      {params.kind === 'coupling' && <label>参考文献最大频次（可选）<input className="block w-28 border border-rule bg-paper-hi p-2" type="number" min={2} max={10000} value={frequency} onChange={(event) => setFrequency(event.target.value)} /></label>}
+      <label>网络类型<select className="block border border-rule bg-paper-hi p-2" value={params.kind} onChange={(event) => { invalidate(); setParams({ ...params, kind: event.target.value as 'keywords' | 'coupling' }); }}><option value="keywords">关键词共现</option><option value="coupling">文献耦合</option></select></label>
+      {([['min_occurrences', '最少出现次数', 1, 10000], ['min_weight', '最小边权重', 1, 10000], ['max_nodes', '最多节点', 10, 300], ['max_edges', '最多连边', 10, 2000]] as const).map(([key, label, min, max]) => <label key={key}>{label}<input className="block w-24 border border-rule bg-paper-hi p-2" type="number" required min={min} max={max} value={params[key] ?? ''} onChange={(event) => { invalidate(); setParams({ ...params, [key]: Number(event.target.value) }); }} /></label>)}
+      {params.kind === 'coupling' && <label>参考文献最大频次（可选）<input className="block w-28 border border-rule bg-paper-hi p-2" type="number" min={2} max={10000} value={frequency} onChange={(event) => { invalidate(); setFrequency(event.target.value); }} /></label>}
       <button className="gr-btn" disabled={busy} type="submit">生成网络</button>
     </form>
     {error && <p role="alert" className="mt-4 text-rubric">{error}</p>}
