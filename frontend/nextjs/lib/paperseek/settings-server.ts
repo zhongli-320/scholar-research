@@ -12,15 +12,14 @@ const headers = { 'Cache-Control': 'no-store' };
 const error = (status: number, code: string) => Response.json({ error: { code, message: 'PaperSeek settings request failed' } }, { status, headers });
 export async function settingsGateway(request: Request, segments: string[], shape: 'workspace' | 'connection' | 'other' = 'other', omitBlankKey = false) {
   const url = new URL(request.url);
-  if (request.method !== 'GET') {
-    const origin = request.headers.get('origin');
-    // Next may use its listening hostname in request.url. Only trust loopback Host values.
-    const host = request.headers.get('host') ?? url.host;
-    const address = `${url.protocol}//${host}`;
-    if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) ||
-        !URL.canParse(address) || origin !== new URL(address).origin) {
-      return error(403, 'FORBIDDEN_ORIGIN');
-    }
+  // Next may use its listening hostname in request.url. Only trust loopback Host values.
+  const host = request.headers.get('host') ?? url.host;
+  const address = `${url.protocol}//${host}`;
+  if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) || !URL.canParse(address)) {
+    return error(403, 'FORBIDDEN_ORIGIN');
+  }
+  if (request.method !== 'GET' && request.headers.get('origin') !== new URL(address).origin) {
+    return error(403, 'FORBIDDEN_ORIGIN');
   }
   if (segments.some(segment => segment === '.' || segment === '..' || /[/\\]/.test(segment))) {
     return error(400, 'INVALID_REQUEST');

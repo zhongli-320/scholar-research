@@ -17,17 +17,39 @@ export default function PaperSeekSettings() {
   const [selected, setSelected] = useState('');
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
   const [replacement, setReplacement] = useState('');
   const load = useCallback(async () => setSettings(await loadPaperSeekSettings()), []);
   useEffect(() => { void load().catch(() => setStatus('无法连接 PaperSeek，请检查服务。')); }, [load]);
+  const refresh = async (message?: string) => {
+    try {
+      await load();
+      setRefreshFailed(false);
+      setStatus(message || '设置已刷新。');
+    } catch {
+      setRefreshFailed(true);
+      setStatus(message ? `${message}，刷新失败。` : '刷新失败，请重试。');
+    }
+  };
   const run = async (action: () => Promise<unknown>, message = '已保存') => {
     setBusy(true); setStatus('');
-    try { await action(); await load(); setStatus(message); } catch { setStatus('操作失败，请检查输入或 PaperSeek 连接。'); }
-    setBusy(false);
+    try {
+      await action();
+      await refresh(message);
+    } catch { setStatus('操作失败，请检查输入或 PaperSeek 连接。'); }
+    finally { setBusy(false); }
   };
   const probe = async (action: () => Promise<Probe>) => {
     setBusy(true); setStatus('');
-    try { const result = await action(); await load(); setStatus(result.ok ? '测试成功' : `测试失败：${result.code}`); } catch { setStatus('测试失败，请检查 PaperSeek 连接。'); }
+    try {
+      const result = await action();
+      await refresh(result.ok ? '测试成功' : `测试失败：${result.code}`);
+    } catch { setStatus('测试失败，请检查 PaperSeek 连接。'); }
+    finally { setBusy(false); }
+  };
+  const retryRefresh = async () => {
+    setBusy(true);
+    await refresh();
     setBusy(false);
   };
   if (!settings) return <p role="status" className="p-6">{status || '正在加载设置…'}</p>;
@@ -35,7 +57,11 @@ export default function PaperSeekSettings() {
   const isDefault = current && [settings.defaults.search_llm, settings.defaults.review_llm, settings.defaults.embedding, settings.defaults.reranker, settings.defaults.decision].includes(current.id);
   const alternatives = current ? settings.connections.filter(c => c.kind === current.kind && c.id !== current.id) : [];
   return <div className="space-y-10 p-5 sm:p-8">
-    <p role="status" aria-live="polite">{status}</p>
+    <div>
+      <p role="status" aria-live="polite">{status}</p>
+      {refreshFailed && <button disabled={busy} className="gr-btn-line mt-2" type="button" onClick={() => void retryRefresh()}>重新加载设置</button>}
+    </div>
+    <fieldset disabled={busy} aria-busy={busy} className="min-w-0 space-y-10">
     <section><h2 className="text-xl font-semibold">模型连接</h2>
       <label className="mt-3 block">选择连接<select className={input} value={selected} onChange={e => { setSelected(e.target.value); setReplacement(''); }}><option value="">新增连接</option>{settings.connections.map(c => <option key={c.id} value={c.id}>{c.kind} · {c.provider} · {c.model}</option>)}</select></label>
       <form key={selected} className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); const form = e.currentTarget; const data = connectionData(new FormData(form)); void run(async () => { if (current) await updateConnection(current.id, data); else await createConnection(data); form.reset(); setSelected(''); }); }}>
@@ -66,5 +92,6 @@ export default function PaperSeekSettings() {
       <button disabled={busy} className="gr-btn-line" type="submit">保存代理</button>
       {settings.proxy?.origin === 'settings' && <button disabled={busy} className="gr-btn-line ml-3" type="button" onClick={() => { if (window.confirm('移除已保存的代理地址？')) void run(() => saveProxy({ urls: '', scope: settings.proxy?.scope.length ? settings.proxy.scope : scopes }), '代理已移除'); }}>移除已保存代理</button>}
     </form></section>
+    </fieldset>
   </div>;
 }

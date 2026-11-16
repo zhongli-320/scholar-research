@@ -46,6 +46,22 @@ describe('settings gateway boundary', () => {
       expect(fetcher).not.toHaveBeenCalled();
     },
   );
+  it('blocks a settings read through a foreign Host before connecting upstream', async () => {
+    setup({});
+    const response = await GET(new Request('http://localhost:3000/api/paperseek/settings', {
+      headers: { Host: 'evil.example:3000' },
+    }));
+    expect(response.status).toBe(403);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('allows a loopback settings read without an Origin header', async () => {
+    setup({ connections: [], sources: [], defaults: { search_llm: '', review_llm: '', pre_ranking: 'local_fusion', embedding: '', reranker: '', decision: '', source: '' }, proxy: null });
+    const response = await GET(new Request('http://localhost:3000/api/paperseek/settings', {
+      headers: { Host: '[::1]:3000' },
+    }));
+    expect(response.status).toBe(200);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
   it.each(['https://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'])('requires the exact scheme, port and host of the browser Origin %s', async (Origin) => {
     setup({});
     const request = mutating('http://localhost:3000/api/paperseek/settings/connections/a/test', undefined, { Host: 'localhost:3000', Origin });
