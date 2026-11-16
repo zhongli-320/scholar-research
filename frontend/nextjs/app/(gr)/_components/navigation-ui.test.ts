@@ -10,7 +10,7 @@ vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
 
 describe('mobile navigation', () => {
   it('groups history links inside a closed history disclosure', () => {
-    const document = new JSDOM(renderToStaticMarkup(React.createElement(TopBar))).window.document;
+    const document = new JSDOM(renderToStaticMarkup(React.createElement(TopBar))).window.document as Document;
     const mobile = document.querySelector('details.md\\:hidden');
     const history = mobile?.querySelector('nav > details');
     expect(history?.querySelector('summary')?.textContent).toBe('历史记录');
@@ -21,7 +21,7 @@ describe('mobile navigation', () => {
 });
 
 it('closes all disclosure ancestors after following a menu link', () => {
-  const document = new JSDOM('<details open><nav><details open><a href="/history/reviews">综述历史</a></details></nav></details>').window.document;
+  const document = new JSDOM('<details open><nav><details open><a href="/history/reviews">综述历史</a></details></nav></details>').window.document as Document;
   const link = document.querySelector('a')!;
   closeMenuDetails(link);
   expect(Array.from(document.querySelectorAll('details'), (details) => details.open)).toEqual([false, false]);
