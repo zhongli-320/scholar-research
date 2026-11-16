@@ -11,7 +11,7 @@ from pathlib import Path
 warnings.filterwarnings("ignore", message="Valid config keys have changed in V2")
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
-from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, File, UploadFile, BackgroundTasks, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -388,8 +388,7 @@ async def generate_report(research_request: ResearchRequest, background_tasks: B
 
 
 @app.get("/files/")
-async def list_files(response: Response):
-    response.headers["X-Research-Workbench"] = "gpt-researcher"
+async def list_files():
     if os.getenv("PUBLIC_DEMO_MODE") == "1":
         return {"files": []}
     if not os.path.exists(DOC_PATH):

@@ -18,7 +18,13 @@ function Test-Ready($service) {
         if ($service.Name -eq 'PaperSeek') { return (($response.Content | ConvertFrom-Json).status -eq 'ready') }
         if ($service.Name -eq 'GPT Researcher') {
             $body = $response.Content | ConvertFrom-Json
-            return ($response.Headers['X-Research-Workbench'] -eq 'gpt-researcher' -and $body.files -is [array])
+            $origin = ([Uri]$service.Url).GetLeftPart([System.UriPartial]::Authority)
+            if ($body.agent_discovery_version -ne '0.1' -or $body.services -isnot [array]) { return $false }
+            $research = @($body.services | Where-Object { $_.name -eq 'research' -and $_.endpoint -eq "$origin/report/" -and $_.description -eq 'Submit a research job and generate a report.' })
+            $reports = @($body.services | Where-Object { $_.name -eq 'reports' -and $_.endpoint -eq "$origin/api/reports" })
+            $chat = @($body.services | Where-Object { $_.name -eq 'chat' -and $_.endpoint -eq "$origin/api/chat" })
+            $stream = @($body.services | Where-Object { $_.name -eq 'research_stream' -and $_.endpoint -eq ($origin.Replace('http://', 'ws://') + '/ws') })
+            return ($research.Count -eq 1 -and $reports.Count -eq 1 -and $chat.Count -eq 1 -and $stream.Count -eq 1)
         }
         return $response.Content.Contains('data-research-workbench="literature"')
     } catch { return $false }
@@ -28,7 +34,7 @@ function Test-PortOpen([int]$Port) {
 }
 $services = @(
     @{ Name='PaperSeek'; Port=$PaperSeekPort; Url="http://127.0.0.1:$PaperSeekPort/ready" },
-    @{ Name='GPT Researcher'; Port=$BackendPort; Url="http://127.0.0.1:$BackendPort/files/" },
+    @{ Name='GPT Researcher'; Port=$BackendPort; Url="http://127.0.0.1:$BackendPort/.well-known/agent-discovery.json" },
     @{ Name='Next.js'; Port=$FrontendPort; Url="http://127.0.0.1:$FrontendPort/" }
 )
 if (@($services.Port | Select-Object -Unique).Count -ne 3) { throw 'Service ports must be distinct.' }

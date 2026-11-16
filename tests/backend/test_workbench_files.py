@@ -1,5 +1,4 @@
 import asyncio
-from fastapi import Response
 from backend.server import app as app_module
 
 
@@ -7,9 +6,7 @@ def test_files_probe_does_not_create_directory(monkeypatch, tmp_path):
     missing = tmp_path / "missing"
     monkeypatch.delenv("PUBLIC_DEMO_MODE", raising=False)
     monkeypatch.setattr(app_module, "DOC_PATH", str(missing))
-    response = Response()
-    assert asyncio.run(app_module.list_files(response)) == {"files": []}
-    assert response.headers["X-Research-Workbench"] == "gpt-researcher"
+    assert asyncio.run(app_module.list_files()) == {"files": []}
     assert not missing.exists()
 
 
