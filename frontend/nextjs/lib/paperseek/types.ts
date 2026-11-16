@@ -13,7 +13,8 @@ export interface PaperSeekRun {
   result_count: number;
   current_step?: string; warnings?: string[]; error_code?: string;
 }
-export interface PaperSeekHistoryPage { items: PaperSeekRun[]; next_cursor: string | null; matched_count: number }
+export interface PaperSeekHistoryItem extends PaperSeekRun { created_at: string; kind?: string }
+export interface PaperSeekHistoryPage { items: PaperSeekHistoryItem[]; next_cursor: string | null; matched_count: number }
 export interface PaperSeekResultPage { results: PaperSeekResult[]; next_cursor: string | null; total_count: number; matched_count: number; scored_count: number; high_score_count: number; max_score: number | null }
 export interface PaperSeekRunInput {
   question: string;

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { createRun, listHistory, listSources, PaperSeekApiError } from '@/lib/paperseek/client';
+import { latestSearch } from '@/lib/paperseek/history';
 import type { PaperSeekRun, PaperSeekSource } from '@/lib/paperseek/types';
 import { Arrow, Eye } from './ui';
 
@@ -40,8 +41,8 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
       setSources(available);
       setSource(available.find((item) => item.default)?.id ?? 'openalex');
     }).catch(() => { if (active) setSourceError(true); });
-    void listHistory({ limit: 1 }).then((history) => {
-      if (active) setRecent(history.items[0] ?? null);
+    void listHistory().then((history) => {
+      if (active) setRecent(latestSearch(history.items));
     }).catch(() => { if (active) setHistoryError(true); });
     return () => { active = false; };
   }, [mockData]);

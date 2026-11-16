@@ -20,7 +20,7 @@ let root: Root;
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(listSources).mockResolvedValue(sources);
-  vi.mocked(listHistory).mockResolvedValue({ items: [recent], next_cursor: null, matched_count: 1 });
+  vi.mocked(listHistory).mockResolvedValue({ items: [{ ...recent, created_at: '2026-01-01' }], next_cursor: null, matched_count: 1 });
   container = document.createElement('div');
   document.body.appendChild(container);
   root = createRoot(container);
