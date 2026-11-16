@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 import LiteratureRunScreen from './LiteratureRunScreen';
-import { getRun } from '@/lib/paperseek/client';
+import { getRun, getResults, getCitationMap, listArtifacts } from '@/lib/paperseek/client';
 import { openRunEvents } from '@/lib/paperseek/events';
 vi.mock('@/lib/paperseek/client', () => ({
   getRun: vi.fn(), cancelRun: vi.fn(), exportRun: vi.fn().mockReturnValue('/export'), exportSelected: vi.fn(), getResults: vi.fn().mockResolvedValue({ results: [], total_count: 0 }),
@@ -58,5 +58,33 @@ it('shows terminal state while its state refresh is still pending', async () => 
   await act(async () => { vi.mocked(openRunEvents).mock.calls[0][1].onEvent({ run_id: 'a', sequence: 9, event_type: 'run.failed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: { code: 'TIMEOUT' } }); });
   expect(container.textContent).toContain('状态：failed');
   expect(container.textContent).not.toContain('取消此检索');
+  await act(async () => root.unmount());
+});
+it('loads results only after recovering a completed run when state and results are offline', async () => {
+  let online = false;
+  const run = { id: 'a', question: 'q', display_title: '', source: 'openalex', result_count: 1 };
+  vi.mocked(getRun).mockResolvedValueOnce({ ...run, status: 'running' }).mockImplementation(async () => {
+    if (!online) throw new Error('offline');
+    return { ...run, status: 'completed' };
+  });
+  vi.mocked(getResults).mockImplementation(async () => {
+    if (!online) throw new Error('offline');
+    return { results: [], next_cursor: null, total_count: 1, matched_count: 1, scored_count: 1, high_score_count: 0, max_score: 3 };
+  });
+  vi.mocked(getCitationMap).mockImplementation(async () => { if (!online) throw new Error('offline'); return { nodes: [], edges: [] }; });
+  vi.mocked(listArtifacts).mockImplementation(async () => { if (!online) throw new Error('offline'); return []; });
+  const container = document.createElement('div'); const root = createRoot(container);
+  await act(async () => root.render(<LiteratureRunScreen id="a" />));
+  await act(async () => vi.mocked(openRunEvents).mock.calls[0][1].onEvent({ run_id: 'a', sequence: 4, event_type: 'run.completed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: {} }));
+  expect(container.textContent).toContain('状态：completed');
+  expect(container.textContent).not.toContain('取消此检索');
+  expect(getResults).not.toHaveBeenCalled(); expect(getCitationMap).not.toHaveBeenCalled(); expect(listArtifacts).not.toHaveBeenCalled();
+  online = true;
+  const retry = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!;
+  await act(async () => retry.click());
+  expect(vi.mocked(getRun).mock.calls.map(([id]) => id)).toEqual(['a', 'a', 'a']);
+  expect(getResults).toHaveBeenCalledWith('a', expect.anything());
+  expect(getCitationMap).toHaveBeenCalledWith('a'); expect(listArtifacts).toHaveBeenCalledWith('a');
+  expect(container.textContent).toContain('共 1 条');
   await act(async () => root.unmount());
 });
