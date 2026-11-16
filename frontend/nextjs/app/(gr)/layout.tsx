@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Gelasio, Instrument_Sans, JetBrains_Mono } from 'next/font/google';
-import { SettingsDialog } from './_components/Settings';
 import { TopBar } from './_components/ui';
 import './gr.css';
 
@@ -22,7 +21,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="gr-grain" aria-hidden="true" />
       <TopBar />
       {children}
-      <SettingsDialog />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { reportLabel, type BriefValue } from '@/lib/research/brief';
 import { MCP_PRESETS, checkMcp, formatMcp, mcpPlaceholders, togglePreset } from '@/lib/research/mcp';
 import { MCP_STRATEGIES, REPORT_TYPES, SOURCES, SitesEditor, TONES, type Option } from './Brief';
 import { useBackend, type BackendStatus } from './backend';
-import { closeSettings, openSettings, useBrief, useSettingsTab, type SettingsTab } from './preferences';
+import { openSettings, useBrief, type SettingsTab } from './preferences';
 
 const MCP_DOCS = 'https://docs.gptr.dev/docs/gpt-researcher/retrievers/mcp-configs';
 
@@ -19,34 +19,6 @@ const TABS: { id: SettingsTab; label: string }[] = [
 const STATUS_WORD: Record<BackendStatus, string> = { online: 'Online', offline: 'Offline', checking: 'Checking' };
 
 const plain = (label: string) => label.replace(/^(a|an|the) /, '').replace(/^./, (c) => c.toUpperCase());
-
-const GearIcon = () => (
-  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true">
-    <path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7" />
-    <rect x="9" y="3" width="3" height="3" />
-    <rect x="4" y="10" width="3" height="3" />
-  </svg>
-);
-
-export function SettingsButton() {
-  const backend = useBackend();
-  const tab = useSettingsTab();
-  const offline = backend.status === 'offline';
-  return (
-    <button
-      type="button"
-      onClick={() => openSettings(offline ? 'backend' : 'research')}
-      aria-haspopup="dialog"
-      aria-expanded={tab !== null}
-      aria-label={offline ? 'Settings, backend offline' : 'Settings'}
-      className="relative inline-flex h-[38px] items-center gap-2 px-[11px] text-[13.5px] font-medium text-ink-2 transition-colors hover:text-ink"
-    >
-      <GearIcon />
-      <span className="hidden sm:inline">Settings</span>
-      {offline && <i className="absolute right-1 top-1.5 h-[7px] w-[7px] bg-rubric" aria-hidden="true" />}
-    </button>
-  );
-}
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
   return (
@@ -384,128 +356,26 @@ function BackendPanel() {
   );
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([tabindex="-1"]), textarea, [tabindex]:not([tabindex="-1"])';
-
-function Dialog({ tab }: { tab: SettingsTab }) {
-  const panel = useRef<HTMLDivElement>(null);
-  const titleId = useId();
+export function ResearcherSettings({ tab }: { tab: SettingsTab }) {
   const [brief, setBrief] = useBrief();
   const backend = useBackend();
   const mcp = checkMcp(brief.mcp_configs);
-
-  useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null;
-    panel.current?.querySelector<HTMLElement>('[role=tab][aria-selected=true]')?.focus();
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeSettings();
-        return;
-      }
-      if (e.key !== 'Tab' || !panel.current) return;
-      const focusable = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.offsetParent !== null);
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last?.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first?.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = overflow;
-      opener?.focus();
-    };
-  }, []);
-
   const hints: Record<SettingsTab, string> = {
     research: reportLabel(brief.report_type),
     mcp: !brief.mcp_enabled ? 'Off' : mcp.state === 'invalid' ? 'Fix' : String(mcp.servers.length),
     documents: backend.status === 'online' ? String(backend.documents.length) : '–',
     backend: STATUS_WORD[backend.status],
   };
-
-  const move = (by: number) => {
-    const i = TABS.findIndex((t) => t.id === tab);
-    const next = TABS[(i + by + TABS.length) % TABS.length].id;
-    openSettings(next);
-    requestAnimationFrame(() => document.getElementById(`settings-tab-${next}`)?.focus());
-  };
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center sm:p-6">
-      <button type="button" tabIndex={-1} aria-hidden="true" className="absolute inset-0 cursor-default bg-ink/30 backdrop-blur-[2px]" onClick={closeSettings} />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="gr-in relative flex h-full w-full min-w-0 flex-col bg-paper-hi shadow-[0_40px_90px_-40px_rgba(26,22,18,0.7),0_0_0_1px_rgba(29,25,21,0.14)] sm:h-[min(700px,calc(100vh-48px))] sm:w-[min(880px,100%)]"
-      >
-        <header className="flex flex-none items-center justify-between border-b border-rule-soft px-5 py-3.5 sm:px-7">
-          <h2 id={titleId} className="font-display text-[23px] font-semibold tracking-[-0.02em]">
-            Settings
-          </h2>
-          <button type="button" onClick={closeSettings} aria-label="Close settings" className="grid h-9 w-9 place-items-center text-[20px] text-ink-2 hover:text-rubric">
-            ×
-          </button>
-        </header>
-        <div className="flex min-h-0 flex-1 flex-col sm:grid sm:grid-cols-[200px_minmax(0,1fr)]">
-          <div
-            role="tablist"
-            aria-label="Settings sections"
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown' || e.key === 'ArrowRight') move(1);
-              else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') move(-1);
-              else return;
-              e.preventDefault();
-            }}
-            className="gr-scroll flex flex-none overflow-x-auto border-b border-rule-soft px-2 sm:flex-col sm:overflow-visible sm:border-b-0 sm:border-r sm:px-0 sm:py-3"
-          >
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                id={`settings-tab-${t.id}`}
-                type="button"
-                role="tab"
-                aria-selected={t.id === tab}
-                aria-controls="settings-panel"
-                tabIndex={t.id === tab ? 0 : -1}
-                onClick={() => openSettings(t.id)}
-                className="flex flex-none items-baseline justify-between gap-3 whitespace-nowrap border-b-2 border-transparent px-3 py-3 text-left text-[14px] font-medium text-ink-2 transition-colors hover:text-ink aria-selected:border-rubric aria-selected:text-ink sm:border-b-0 sm:border-l-2 sm:px-5 sm:py-2.5 sm:aria-selected:bg-paper"
-              >
-                {t.label}
-                <span className={`font-code text-[10.5px] tabular-nums ${t.id === 'mcp' && hints.mcp === 'Fix' ? 'text-rubric' : t.id === 'backend' && backend.status === 'offline' ? 'text-rubric' : 'text-ink-3'}`}>
-                  {hints[t.id]}
-                </span>
-              </button>
-            ))}
-          </div>
-          <div id="settings-panel" role="tabpanel" aria-labelledby={`settings-tab-${tab}`} className="gr-scroll min-h-0 flex-1 overflow-auto px-5 py-6 sm:px-8 sm:py-7">
-            {tab === 'research' && <ResearchPanel brief={brief} onChange={setBrief} />}
-            {tab === 'mcp' && <McpPanel brief={brief} onChange={setBrief} />}
-            {tab === 'documents' && <DocumentsPanel brief={brief} onChange={setBrief} />}
-            {tab === 'backend' && <BackendPanel />}
-          </div>
-        </div>
-        <footer className="flex flex-none items-center justify-between gap-4 border-t border-rule-soft px-5 py-3 sm:px-7">
-          <p className="text-[12.5px] leading-snug text-ink-3">Saved in this browser as you go. New research uses these settings.</p>
-          <button type="button" className="gr-btn flex-none" onClick={closeSettings}>
-            Done
-          </button>
-        </footer>
-      </div>
+  return <div className="sm:grid sm:grid-cols-[200px_minmax(0,1fr)]">
+    <nav aria-label="Settings sections" className="flex overflow-x-auto border-b border-rule-soft sm:flex-col sm:border-b-0 sm:border-r">
+      {TABS.map((t) => <a key={t.id} href={`/settings?tab=gpt-researcher&section=${t.id}`} aria-current={t.id === tab ? 'page' : undefined} className="flex justify-between gap-3 whitespace-nowrap px-4 py-3 text-sm font-medium aria-[current=page]:text-rubric">{t.label}<span className="font-code text-ink-3">{hints[t.id]}</span></a>)}
+    </nav>
+    <div className="px-5 py-6 sm:px-8">
+      {tab === 'research' && <ResearchPanel brief={brief} onChange={setBrief} />}
+      {tab === 'mcp' && <McpPanel brief={brief} onChange={setBrief} />}
+      {tab === 'documents' && <DocumentsPanel brief={brief} onChange={setBrief} />}
+      {tab === 'backend' && <BackendPanel />}
+      <p className="mt-8 text-[12.5px] text-ink-3">Saved in this browser as you go. New research uses these settings.</p>
     </div>
-  );
-}
-
-export function SettingsDialog() {
-  const tab = useSettingsTab();
-  return tab === null ? null : <Dialog tab={tab} />;
+  </div>;
 }

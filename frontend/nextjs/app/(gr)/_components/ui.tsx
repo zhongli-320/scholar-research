@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { useBackend } from './backend';
 import { useLinks } from './mode';
 import { MAIN_NAV_ITEMS, HISTORY_NAV_ITEMS, SETTINGS_HREF, closeMenuDetails } from './navigation';
-import { openSettings } from './preferences';
 
 export const clock = (seconds: number) => {
   const s = Math.max(0, Math.floor(seconds));
@@ -85,11 +84,9 @@ export function Connection() {
   const backend = useBackend();
   const label = backend.status === 'online' ? bare(backend.host) : backend.status;
   return (
-    <button
-      type="button"
-      aria-haspopup="dialog"
+    <Link
+      href="/settings?tab=gpt-researcher&section=backend"
       aria-label={`Backend: ${label}`}
-      onClick={() => openSettings('backend')}
       className={`inline-flex h-8 items-center gap-2.5 font-code text-[11px] tracking-[0.06em] transition-colors ${
         backend.status === 'offline' ? 'text-rubric' : 'text-ink-3 hover:text-ink'
       }`}
@@ -100,7 +97,7 @@ export function Connection() {
       />
       <span>Backend</span>
       <span className="underline decoration-rule underline-offset-4">{label}</span>
-    </button>
+    </Link>
   );
 }
 

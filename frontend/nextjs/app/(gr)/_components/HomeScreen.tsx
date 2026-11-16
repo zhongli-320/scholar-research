@@ -175,9 +175,9 @@ export default function HomeScreen({
           {offline && (
             <p role="alert" className="mt-3 text-[14px] leading-snug text-rubric">
               Cannot reach the backend at {backend.host || 'localhost:8000'}. Start it with <code className="font-code text-[12.5px]">python main.py</code>, or{' '}
-              <button type="button" className="font-medium underline underline-offset-4" onClick={() => openSettings('backend')}>
+              <Link href="/settings?tab=gpt-researcher&section=backend" className="font-medium underline underline-offset-4">
                 change the address in Settings
-              </button>
+              </Link>
               .
             </p>
           )}

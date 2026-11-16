@@ -60,18 +60,5 @@ export function useBrief() {
 }
 
 export function openSettings(next: SettingsTab = 'research') {
-  tab = next;
-  emit();
+  window.location.href = `/settings?tab=gpt-researcher&section=${next}`;
 }
-
-export function closeSettings() {
-  tab = null;
-  emit();
-}
-
-export const useSettingsTab = () =>
-  useSyncExternalStore(
-    subscribe,
-    () => tab,
-    () => null,
-  );
