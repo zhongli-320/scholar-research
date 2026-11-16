@@ -60,3 +60,35 @@ export async function exportSelected(id: string, format: string, uids: string[])
   if (!response.ok) await read(response);
   return response;
 }
+
+const analysisPath = (id: string) => `/api/paperseek/bibliometrics/${encodeURIComponent(id)}`;
+export async function createAnalysis(input: { source_run_id: string; title: string }): Promise<import('./types').PaperSeekAnalysis> {
+  return read(await fetch('/api/paperseek/bibliometrics', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ source_run_id: input.source_run_id, title: input.title }) }));
+}
+export async function listAnalyses(params: { q?: string; offset?: number; limit?: number } = {}): Promise<import('./types').PaperSeekAnalysisPage> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== '') query.set(key, String(value));
+  return read(await fetch(`/api/paperseek/bibliometrics${query.size ? `?${query}` : ''}`, { cache: 'no-store' }));
+}
+export async function getAnalysis(id: string): Promise<import('./types').PaperSeekAnalysis> {
+  return read(await fetch(analysisPath(id), { cache: 'no-store' }));
+}
+async function expectNoContent(response: Response): Promise<void> {
+  if (response.status !== 204) {
+    if (!response.ok) await read(response);
+    throw new PaperSeekApiError('PAPERSEEK_ERROR', 'PaperSeek 返回了意外状态', response.status);
+  }
+}
+export async function renameAnalysis(id: string, title: string): Promise<void> {
+  if (!title.trim()) throw new Error('标题不能为空');
+  await expectNoContent(await fetch(analysisPath(id), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title.trim() }) }));
+}
+export async function deleteAnalysis(id: string): Promise<void> {
+  await expectNoContent(await fetch(analysisPath(id), { method: 'DELETE' }));
+}
+export async function buildNetwork(id: string, params: import('./types').PaperSeekNetworkParameters = { kind: 'keywords', min_occurrences: 2, max_nodes: 100, max_edges: 500 }): Promise<import('./types').PaperSeekMetricNetwork> {
+  return read(await fetch(`${analysisPath(id)}/network`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) }));
+}
+export function exportAnalysis(id: string, format: 'csv' | 'json'): string {
+  return `${analysisPath(id)}/export?${new URLSearchParams({ format })}`;
+}
