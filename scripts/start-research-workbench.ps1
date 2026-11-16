@@ -15,15 +15,18 @@ function Test-Ready($service) {
     try {
         $response = Invoke-WebRequest -UseBasicParsing -Uri $service.Url -TimeoutSec 3 -MaximumRedirection 0
         if ($response.StatusCode -ne 200) { return $false }
-        if ($service.Name -eq 'PaperSeek') { $status = ($response.Content | ConvertFrom-Json).status; return ($status -is [string] -and $status -ceq 'ready') }
-        if ($service.Name -eq 'GPT Researcher') {
+        if ($service.Name -eq 'PaperSeek' -or $service.Name -eq 'GPT Researcher') {
+            if (-not $response.Content.TrimStart().StartsWith('{')) { return $false }
             $body = $response.Content | ConvertFrom-Json
+            if ($body -isnot [pscustomobject]) { return $false }
+            if ($service.Name -eq 'PaperSeek') { return ($body.status -is [string] -and $body.status -ceq 'ready') }
             $origin = ([Uri]$service.Url).GetLeftPart([System.UriPartial]::Authority)
             if (($body.agent_discovery_version -isnot [string] -or $body.agent_discovery_version -cne '0.1') -or $body.services -isnot [array]) { return $false }
-            $research = @($body.services | Where-Object { $_.name -is [string] -and $_.name -ceq 'research' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/report/" -and $_.description -is [string] -and $_.description -ceq 'Submit a research job and generate a report.' })
-            $reports = @($body.services | Where-Object { $_.name -is [string] -and $_.name -ceq 'reports' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/api/reports" })
-            $chat = @($body.services | Where-Object { $_.name -is [string] -and $_.name -ceq 'chat' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/api/chat" })
-            $stream = @($body.services | Where-Object { $_.name -is [string] -and $_.name -ceq 'research_stream' -and $_.endpoint -is [string] -and $_.endpoint -ceq ($origin.Replace('http://', 'ws://') + '/ws') })
+            foreach ($item in $body.services) { if ($item -isnot [pscustomobject]) { return $false } }
+            $research = @($body.services | Where-Object { $_ -is [pscustomobject] -and $_.name -is [string] -and $_.name -ceq 'research' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/report/" -and $_.description -is [string] -and $_.description -ceq 'Submit a research job and generate a report.' })
+            $reports = @($body.services | Where-Object { $_ -is [pscustomobject] -and $_.name -is [string] -and $_.name -ceq 'reports' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/api/reports" })
+            $chat = @($body.services | Where-Object { $_ -is [pscustomobject] -and $_.name -is [string] -and $_.name -ceq 'chat' -and $_.endpoint -is [string] -and $_.endpoint -ceq "$origin/api/chat" })
+            $stream = @($body.services | Where-Object { $_ -is [pscustomobject] -and $_.name -is [string] -and $_.name -ceq 'research_stream' -and $_.endpoint -is [string] -and $_.endpoint -ceq ($origin.Replace('http://', 'ws://') + '/ws') })
             return ($research.Count -eq 1 -and $reports.Count -eq 1 -and $chat.Count -eq 1 -and $stream.Count -eq 1)
         }
         return $response.Content.Contains('data-research-workbench="literature"')

@@ -48,6 +48,13 @@ foreach ($invalid in @(
     $script:response = @{StatusCode=200; Content=$invalid; Headers=@{}}
     if (Test-Ready @{Name='GPT Researcher'; Url='http://localhost/.well-known/agent-discovery.json'}) { throw 'Non-string signature accepted' }
 }
+$script:response = @{StatusCode=200; Content='[{"status":"ready"}]'; Headers=@{}}
+if (Test-Ready @{Name='PaperSeek'; Url='http://localhost/ready'}) { throw 'Array root status accepted' }
+$script:response = @{StatusCode=200; Content=('[' + $validDiscovery + ']'); Headers=@{}}
+if (Test-Ready @{Name='GPT Researcher'; Url='http://localhost/.well-known/agent-discovery.json'}) { throw 'Array root discovery accepted' }
+$wrappedService = $validDiscovery.Replace('{"name":"research","endpoint":"http://localhost/report/","description":"Submit a research job and generate a report."}', '[{"name":"research","endpoint":"http://localhost/report/","description":"Submit a research job and generate a report."}]')
+$script:response = @{StatusCode=200; Content=$wrappedService; Headers=@{}}
+if (Test-Ready @{Name='GPT Researcher'; Url='http://localhost/.well-known/agent-discovery.json'}) { throw 'Nested service array accepted' }
 $probeReady = $readyFunction.Extent.Text
 $probePort = $ast.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Test-PortOpen' }, $true).Extent.Text
 $mocked = $source.Replace($probeReady, 'function Test-Ready($service) { return $false }').Replace($probePort, 'function Test-PortOpen([int]$Port) { return $script:portOpen }')
