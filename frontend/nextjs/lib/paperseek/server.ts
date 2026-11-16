@@ -34,7 +34,7 @@ export async function paperseekRequest(request: Request, path: string, init: Req
     const upstream = await fetch(`${base}${path}`, { ...init, headers, signal, redirect: 'manual' });
     clearTimeout(timeout);
     const responseHeaders = new Headers();
-    for (const name of ['content-type', 'content-disposition']) {
+    for (const name of ['content-type', 'content-disposition', 'cache-control', 'x-accel-buffering']) {
       const value = upstream.headers.get(name);
       if (value) responseHeaders.set(name, value);
     }

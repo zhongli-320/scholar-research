@@ -1,4 +1,4 @@
-import type { PaperSeekHistoryPage, PaperSeekRun, PaperSeekRunInput, PaperSeekSource } from './types';
+import type { PaperSeekArtifact, PaperSeekCitationMap, PaperSeekFilters, PaperSeekHistoryPage, PaperSeekResultPage, PaperSeekRun, PaperSeekRunInput, PaperSeekSource } from './types';
 
 export class PaperSeekApiError extends Error {
   constructor(public code: string, message: string, public status: number) {
@@ -32,4 +32,31 @@ export async function createRun(input: PaperSeekRunInput): Promise<PaperSeekRun>
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
     body: JSON.stringify(input),
   }));
+}
+
+const runPath = (id: string) => `/api/paperseek/runs/${encodeURIComponent(id)}`;
+export async function getRun(id: string): Promise<PaperSeekRun> {
+  return read(await fetch(runPath(id), { cache: 'no-store' }));
+}
+export async function cancelRun(id: string): Promise<PaperSeekRun> {
+  return read(await fetch(`${runPath(id)}/cancel`, { method: 'POST' }));
+}
+export async function getResults(id: string, filters: PaperSeekFilters = {}): Promise<PaperSeekResultPage> {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => { if (value !== undefined && value !== '') query.set(key, String(value)); });
+  return read(await fetch(`${runPath(id)}/results?${query}`));
+}
+export async function getCitationMap(id: string): Promise<PaperSeekCitationMap> {
+  return read(await fetch(`${runPath(id)}/citation-map`));
+}
+export async function listArtifacts(id: string): Promise<PaperSeekArtifact[]> {
+  return (await read<{ artifacts: PaperSeekArtifact[] }>(await fetch(`${runPath(id)}/artifacts`))).artifacts;
+}
+export function exportRun(id: string, format: string): string {
+  return `${runPath(id)}/export?${new URLSearchParams({ format })}`;
+}
+export async function exportSelected(id: string, format: string, uids: string[]): Promise<Response> {
+  const response = await fetch(`${runPath(id)}/export-selected`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ format, uids }) });
+  if (!response.ok) await read(response);
+  return response;
 }
