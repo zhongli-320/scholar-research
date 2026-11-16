@@ -6,7 +6,7 @@ import { markdownToHtml } from '@/helpers/markdownHelper';
 import { numberCitations, sourceKey } from '@/lib/research/citations';
 import type { Activity, PlanReview, Question, RunState, Source } from '@/lib/research/run';
 import { Favicon, FaviconStack, Thumb, domainsBySources, faviconUrl } from './Favicon';
-import { useLinks } from './mode';
+import { useLinks, useMock } from './mode';
 import { questionMark } from './Stages';
 import { Eye, clock } from './ui';
 
@@ -66,6 +66,7 @@ const figureSource = (src: string, sources: Source[]) => {
 
 function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[]; onOpen: (index: number) => void }) {
   const [broken, setBroken] = useState<string[]>([]);
+  const mock = useMock();
   const usable = images.filter((src) => !broken.includes(src));
   const shown = usable.slice(0, 3);
   const more = usable.length - shown.length;
@@ -91,8 +92,7 @@ function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[
                 aria-label={last ? `Open figure ${index + 1}, ${more} more` : `Open figure ${index + 1}`}
                 className={`group relative block w-full overflow-hidden bg-paper-deep outline-offset-2 ${i === 0 ? 'aspect-[16/10] sm:aspect-auto sm:h-full' : 'aspect-[4/3]'}`}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                {mock ? <span aria-hidden="true" className="absolute inset-0 bg-paper-deep" /> : <img
                   src={src}
                   alt=""
                   loading="lazy"
@@ -100,7 +100,7 @@ function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[
                   onError={() => drop(src)}
                   onLoad={(e) => e.currentTarget.naturalWidth < 120 && drop(src)}
                   className="absolute inset-0 h-full w-full object-cover mix-blend-multiply transition-transform duration-500 group-hover:scale-[1.03]"
-                />
+                />}
                 <span className="absolute bottom-0 left-0 inline-flex max-w-full items-center gap-1.5 bg-paper-hi/95 py-1 pl-1 pr-2 font-code text-[10px] uppercase tracking-[0.1em] text-ink-2">
                   {from && <Favicon domain={from.domain} />}
                   <span className="truncate">
@@ -135,6 +135,7 @@ export interface Heading {
 
 /** Markdown from the writer, with citations numbered against the run's sources. */
 export function useCitedHtml(markdown: string, sources: RunState['sources'], streaming = false) {
+  const mock = useMock();
   const [html, setHtml] = useState('');
   const numbers = useMemo(() => new Map(sources.map((s) => [sourceKey(s.url), s.n])), [sources]);
 
@@ -142,17 +143,26 @@ export function useCitedHtml(markdown: string, sources: RunState['sources'], str
     let alive = true;
     const cited = numberCitations(streaming ? settled(markdown) : markdown, (url) => numbers.get(sourceKey(url)));
     markdownToHtml(cited).then((out) => {
-      if (alive) setHtml(withHeadingIds(out));
+      if (alive) {
+        if (mock) {
+          const template = document.createElement('template');
+          template.innerHTML = out;
+          template.content.querySelectorAll('img, picture, source').forEach((image) => image.remove());
+          out = template.innerHTML;
+        }
+        setHtml(withHeadingIds(out));
+      }
     });
     return () => {
       alive = false;
     };
-  }, [markdown, streaming, numbers]);
+  }, [markdown, streaming, numbers, mock]);
 
   return html;
 }
 
 export function useReportHtml(run: RunState) {
+  const mock = useMock();
   const streaming = run.status === 'writing';
   const html = useCitedHtml(run.report, run.sources, streaming);
 
@@ -165,7 +175,7 @@ export function useReportHtml(run: RunState) {
     [html],
   );
 
-  const decorated = useMemo(() => withReferenceIcons(html), [html]);
+  const decorated = useMemo(() => mock ? html : withReferenceIcons(html), [html, mock]);
   return { html: streaming ? decorated.replace(LAST_BLOCK_END, '<span class="gr-caret"></span>$1') : decorated, headings };
 }
 

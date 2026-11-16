@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import { useMock } from './mode';
 
 export const faviconUrl = (domain: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
 
 /** A site's icon on a small paper tile, or its initial when the icon will not load. */
 export function Favicon({ domain, size = 'sm', className = '' }: { domain: string; size?: 'sm' | 'md'; className?: string }) {
   const [failed, setFailed] = useState(false);
+  const mock = useMock();
   const px = size === 'md' ? 16 : 12;
   return (
     <span
       aria-hidden="true"
       className={`gr-fav-tile inline-grid flex-none place-items-center overflow-hidden bg-paper-hi align-middle ${size === 'md' ? 'h-[22px] w-[22px]' : 'h-[18px] w-[18px]'} ${className}`}
     >
-      {failed ? (
+      {failed || mock ? (
         <span className="font-code text-[9.5px] font-medium uppercase leading-none text-ink-2">{domain.charAt(0)}</span>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
@@ -48,7 +50,9 @@ export function FaviconStack({ domains, max = 4, size = 'sm', label }: { domains
 /** A scraped image that removes itself when it fails or turns out to be an icon or spacer. */
 export function Thumb({ src, className = '' }: { src: string; className?: string }) {
   const [hidden, setHidden] = useState(false);
+  const mock = useMock();
   if (hidden) return null;
+  if (mock) return <span aria-hidden="true" className={`block bg-paper-deep ${className}`} />;
   return (
     <span className={`gr-in block overflow-hidden bg-paper-deep ${className}`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -58,6 +58,9 @@ async function remove(name: string) {
   set({ documents: state.documents.filter((d) => d !== name) });
 }
 
+const subscribeOffline = () => () => {};
+const mockOffline = () => new URLSearchParams(window.location.search).get('backend') === 'offline';
+
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
@@ -78,7 +81,7 @@ export function useBackend() {
     void check(getHost());
   }, [mock]);
 
-  const offline = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('backend') === 'offline';
+  const offline = useSyncExternalStore(subscribeOffline, mockOffline, () => false);
   const current = mock ? { host: '', status: offline ? 'offline' as const : 'online' as const, documents: [] as string[] } : snapshot;
   return { ...current, check: () => mock ? Promise.resolve() : check(), setHost: (url: string) => { if (!mock) setHost(url); }, upload: (file: File) => mock ? Promise.resolve() : upload(file), remove: (name: string) => mock ? Promise.resolve() : remove(name) };
 }

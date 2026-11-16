@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RunState } from '@/lib/research/run';
 import { useCitedHtml } from './Sheet';
 import { copyText } from './clipboard';
+import { useMock } from './mode';
 
 export interface ChatMessage {
   id: number;
@@ -18,6 +19,7 @@ export interface ChatMessage {
 
 /** Talks to the backend's `/api/chat`, which answers from the report and can search the web. */
 export function useChat(report: string, initial: ChatMessage[] = []) {
+  const mock = useMock();
   const [messages, setMessages] = useState<ChatMessage[]>(initial);
   const busy = messages.some((m) => m.pending);
 
@@ -25,6 +27,10 @@ export function useChat(report: string, initial: ChatMessage[] = []) {
     const q = question.trim();
     if (!q || busy) return;
     const id = Date.now();
+    if (mock) {
+      setMessages([...history, { id, role: 'user', content: q }, { id: id + 1, role: 'assistant', content: 'Preview response: this example does not contact the research backend.' }]);
+      return;
+    }
     const settled = history.filter((m) => !m.pending && !m.error);
     setMessages([...history, { id, role: 'user', content: q }, { id: id + 1, role: 'assistant', content: '', pending: true }]);
     const started = performance.now();
