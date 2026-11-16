@@ -13,10 +13,14 @@ function Resolve-ServiceAction([bool]$Ready, [bool]$PortOpen) {
 }
 function Test-Ready($service) {
     try {
-        $response = Invoke-WebRequest -UseBasicParsing -Uri $service.Url -TimeoutSec 3
+        $response = Invoke-WebRequest -UseBasicParsing -Uri $service.Url -TimeoutSec 3 -MaximumRedirection 0
         if ($response.StatusCode -ne 200) { return $false }
         if ($service.Name -eq 'PaperSeek') { return (($response.Content | ConvertFrom-Json).status -eq 'ready') }
-        return $true
+        if ($service.Name -eq 'GPT Researcher') {
+            $body = $response.Content | ConvertFrom-Json
+            return ($response.Headers['X-Research-Workbench'] -eq 'gpt-researcher' -and $body.files -is [array])
+        }
+        return $response.Content.Contains('data-research-workbench="literature"')
     } catch { return $false }
 }
 function Test-PortOpen([int]$Port) {
@@ -33,6 +37,8 @@ foreach ($service in $services) {
     Write-Output "$($service.Name) port $($service.Port): $($service.Action)"
 }
 if (@($services | Where-Object Action -eq 'blocked').Count) { throw 'An occupied port is not healthy; no service was started.' }
+if ($services[1].Action -eq 'reuse' -and $FrontendPort -ne 3000) { Write-Warning 'Reused backend: verify CORS permits the selected frontend port.' }
+if ($services[2].Action -eq 'reuse') { Write-Warning 'Reused frontend: verify its configured backend and PaperSeek ports match the selected ports.' }
 if ($CheckOnly) { return }
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -49,6 +55,8 @@ $logDir = Join-Path $root 'logs\workbench'
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $env:PAPERSEEK_API_URL = "http://127.0.0.1:$PaperSeekPort"
 $env:NEXT_PUBLIC_GPTR_API_URL = "http://127.0.0.1:$BackendPort"
+$env:NEXT_PUBLIC_BACKEND_URL = $env:NEXT_PUBLIC_GPTR_API_URL
+$env:WORKBENCH_FRONTEND_ORIGIN = "http://127.0.0.1:$FrontendPort"
 $envFile = Join-Path $root '.env'
 if (-not (Test-Path -LiteralPath $envFile)) { $envFile = Join-Path $mainRepo '.env' }
 foreach ($service in $services) {
@@ -60,15 +68,17 @@ foreach ($service in $services) {
     switch ($service.Name) {
         'PaperSeek' { $exe = $paperPython; $arguments = "-m paperseek_community.cli serve --port $PaperSeekPort"; $working = $paperDir; $logName = 'paperseek' }
         'GPT Researcher' {
-            $exe = $backendPython; $arguments = "-m uvicorn backend.server.app:app --host 0.0.0.0 --port $BackendPort"
+            $exe = $backendPython; $arguments = "-m uvicorn backend.server.app:app --host 127.0.0.1 --port $BackendPort --app-dir `"$root`""
             if (Test-Path -LiteralPath $envFile) { $arguments += ' --env-file "' + $envFile + '"' }
-            $working = $root; $logName = 'backend'
+            $working = $mainRepo; $logName = 'backend'
         }
-        'Next.js' { $exe = $env:ComSpec; $arguments = '/d /c ""' + $npm + '" run dev -- -p ' + $FrontendPort + '"'; $working = $frontDir; $logName = 'frontend' }
+        'Next.js' { $exe = $env:ComSpec; $arguments = '/d /c ""' + $npm + '" run dev -- -H 127.0.0.1 -p ' + $FrontendPort + '"'; $working = $frontDir; $logName = 'frontend' }
     }
     $stdout = Join-Path $logDir "$logName.stdout.log"
     $stderr = Join-Path $logDir "$logName.stderr.log"
-    Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $working -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr | Out-Null
+    try {
+        Start-Process -FilePath $exe -ArgumentList $arguments -WorkingDirectory $working -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr | Out-Null
+    } catch { throw "$($service.Name) failed to start. Logs: $stdout and $stderr. Error: $($_.Exception.Message)" }
     $ready = $false
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1

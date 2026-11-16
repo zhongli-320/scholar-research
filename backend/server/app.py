@@ -11,7 +11,7 @@ from pathlib import Path
 warnings.filterwarnings("ignore", message="Valid config keys have changed in V2")
 warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, File, UploadFile, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Request, Response, WebSocket, WebSocketDisconnect, File, UploadFile, BackgroundTasks, HTTPException
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -107,6 +107,10 @@ ALLOWED_ORIGINS = (
         "https://app.gptr.dev",
     ]
 )
+
+workbench_origin = os.getenv("WORKBENCH_FRONTEND_ORIGIN")
+if workbench_origin and workbench_origin not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(workbench_origin)
 
 # Standard JSON response - no custom MongoDB encoding needed
 
@@ -384,11 +388,12 @@ async def generate_report(research_request: ResearchRequest, background_tasks: B
 
 
 @app.get("/files/")
-async def list_files():
+async def list_files(response: Response):
+    response.headers["X-Research-Workbench"] = "gpt-researcher"
     if os.getenv("PUBLIC_DEMO_MODE") == "1":
         return {"files": []}
     if not os.path.exists(DOC_PATH):
-        os.makedirs(DOC_PATH, exist_ok=True)
+        return {"files": []}
     files = os.listdir(DOC_PATH)
     print(f"Files in {DOC_PATH}: {files}")
     return {"files": files}
@@ -403,6 +408,7 @@ async def run_multi_agents():
 async def upload_file(file: UploadFile = File(...)):
     if os.getenv("PUBLIC_DEMO_MODE") == "1":
         raise HTTPException(status_code=403, detail="File uploads are disabled for the public demo")
+    os.makedirs(DOC_PATH, exist_ok=True)
     return await handle_file_upload(file, DOC_PATH)
 
 
