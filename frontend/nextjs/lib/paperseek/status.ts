@@ -18,6 +18,11 @@ const STAGE: Record<string, string> = {
   citation: '引用扩展',
   selection: '候选筛选',
   ranking: '相关性排序',
+  cancelling: '正在取消',
+  completed: '已完成',
+  completed_with_warnings: '已完成',
+  failed: '失败',
+  cancelled: '已取消',
 };
 
 export const runStageLabel = (stage: string) => STAGE[stage] ?? stage;

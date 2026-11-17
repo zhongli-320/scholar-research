@@ -14,6 +14,7 @@ it('offers only completed searches and confirms deletion before sending', async 
   const element = document.createElement('div'); const root = createRoot(element);
   await act(async () => root.render(<BibliometricsHome />));
   expect(element.textContent).toContain('Done'); expect(element.textContent).not.toContain('Running');
+  expect(element.textContent).toContain('检索候选文献'); expect(element.textContent).not.toContain('retrieved_candidates');
   const button = (label: string) => [...element.querySelectorAll('button')].find((b) => b.textContent === label)!;
   await act(async () => button('删除').click()); expect(deleteAnalysis).not.toHaveBeenCalled();
   await act(async () => button('确认删除').click()); expect(deleteAnalysis).toHaveBeenCalledWith('a');

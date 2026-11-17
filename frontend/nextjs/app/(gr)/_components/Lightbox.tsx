@@ -42,13 +42,13 @@ export default function Lightbox({ images, index, onIndex, onClose }: { images: 
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Figure ${index + 1} of ${count}`}
+      aria-label={`图表 ${index + 1} / ${count}`}
       className="fixed inset-0 z-[80] flex flex-col bg-paper/95 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8">
         <p className="gr-meta">
-          Figure {index + 1} of {count}
+          图表 {index + 1} / {count}
           {host(src) && <span className="normal-case tracking-normal"> · {host(src)}</span>}
         </p>
         <button ref={closeButton} type="button" onClick={onClose} className="gr-btn-line">
@@ -65,10 +65,10 @@ export default function Lightbox({ images, index, onIndex, onClose }: { images: 
         {count > 1 && (
           <div className="flex gap-2">
             <button type="button" onClick={() => go(-1)} className="gr-btn-line" aria-label="上一张图表">
-              Previous
+              上一张
             </button>
             <button type="button" onClick={() => go(1)} className="gr-btn-line" aria-label="下一张图表">
-              Next
+              下一张
             </button>
           </div>
         )}

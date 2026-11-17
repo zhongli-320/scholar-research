@@ -44,9 +44,15 @@ it('keeps report suggestions and typed chat in the real preview component offlin
 it('renders old mock home, archive and report images without external image URLs', async () => {
   setup(); window.history.replaceState({}, '', '/mocks/report');
   const element = document.createElement('div'); const root = createRoot(element);
-  await act(async () => root.render(<MockMode archive={archive}><HomeScreen /><ArchiveScreen /><MockRun at={9999} figure={0} /><Favicon domain="example.com" /><Thumb src="https://images.example/thumb.png" /><Lightbox images={['https://images.example/large.png']} index={0} onIndex={() => {}} onClose={() => {}} /><CitedImage /></MockMode>));
+  await act(async () => root.render(<MockMode archive={archive}><HomeScreen /><ArchiveScreen /><MockRun at={9999} figure={0} /><Favicon domain="example.com" /><Thumb src="https://images.example/thumb.png" /><Lightbox images={['https://images.example/large.png', 'https://images.example/second.png']} index={0} onIndex={() => {}} onClose={() => {}} /><CitedImage /></MockMode>));
   const externalImages = [...element.querySelectorAll('img')].map(img => img.getAttribute('src') ?? '').filter(src => /^(?:https?:)?\/\//i.test(src));
   expect(externalImages).toEqual([]);
+  expect(element.textContent).toContain('图表 1 / 2');
+  expect(element.textContent).toContain('上一张'); expect(element.textContent).toContain('下一张');
+  expect(element.querySelector('[aria-label^="Figure"]')).toBeNull();
+  expect([...element.querySelectorAll('button')].some((button) => /^(?:Previous|Next)$/.test(button.textContent ?? ''))).toBe(false);
+  expect([...element.querySelectorAll('span')].some((span) => /^图表 1(?:\s|·)/.test(span.textContent ?? ''))).toBe(true);
+  expect([...element.querySelectorAll('span')].some((span) => /^Fig\./.test(span.textContent ?? ''))).toBe(false);
   await act(async () => root.unmount()); vi.unstubAllGlobals();
 });
 

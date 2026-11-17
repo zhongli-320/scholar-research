@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { exportAnalysis, getAnalysis } from '@/lib/paperseek/client';
 import type { MetricBucket, PaperSeekAnalysis } from '@/lib/paperseek/types';
+import { analysisScopeLabel } from '@/lib/paperseek/bibliometrics';
 import NetworkView from './NetworkView';
 
 export default function BibliometricsDetail({ id }: { id: string }) {
@@ -24,7 +25,7 @@ export default function BibliometricsDetail({ id }: { id: string }) {
     return key !== 'year' && total > s.category_limit ? `前 ${s.category_limit} / 共 ${total}` : `共 ${total}`;
   };
   const citationsMissing = s.coverage.find((item) => item.field === 'citations')?.available === 0;
-  const scope = analysis.scope === 'retrieved_candidates' ? '检索候选文献' : analysis.scope === 'legacy_ranked_only' ? '历史排序结果' : analysis.scope;
+  const scope = analysisScopeLabel(analysis.scope);
   return <main className="mx-auto w-full max-w-[860px] px-5 pb-16 pt-[9vh] sm:px-8"><Link href="/bibliometrics" className="text-sm hover:text-rubric">← 文献计量</Link><h1 className="mt-4 font-display text-4xl font-semibold">{analysis.title}</h1>
     <p className="mt-4">论文 {s.paper_count} 篇 · 已评分 {s.scored_count} 篇 · {citationsMissing ? '引用数据缺失（有引用篇数未知）' : `引用 ${s.citation_sum} 次 · 有引用 ${s.cited_paper_count} 篇`} · 已匹配期刊分区 {s.ranked_paper_count ?? 0} 篇 · 中科院 Top {s.cas_top_count ?? 0} 篇</p>
     <p className="mt-2 text-sm text-ink-3">范围：{scope} · 来源检索：{analysis.source_run_id} · 来源报告总量：{analysis.source_reported_total ?? '未知'} · 检索池上限：{analysis.retrieval_pool_limit ?? '未知'} · 评分上限：{analysis.scoring_limit ?? '未知'}</p>

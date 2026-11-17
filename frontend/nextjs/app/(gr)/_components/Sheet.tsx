@@ -104,7 +104,7 @@ function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[
                 <span className="absolute bottom-0 left-0 inline-flex max-w-full items-center gap-1.5 bg-paper-hi/95 py-1 pl-1 pr-2 font-code text-[10px] uppercase tracking-[0.1em] text-ink-2">
                   {from && <Favicon domain={from.domain} />}
                   <span className="truncate">
-                    Fig. {index + 1}
+                    图表 {index + 1}
                     {from && <span className="normal-case tracking-normal"> · {from.domain}</span>}
                   </span>
                 </span>

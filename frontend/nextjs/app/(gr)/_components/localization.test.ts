@@ -14,6 +14,8 @@ it('presents the review workflow in Chinese while preserving protocol values', (
   expect(sourcesSummary({ sources: [{ domain: 'a.example' }, { domain: 'a.example' }] } as never)).toBe('2 个来源 · 1 个网站');
   expect(runStatusLabel('completed_with_warnings')).toBe('已完成');
   expect(runStageLabel('retrieval')).toBe('文献获取');
+  expect(runStageLabel('completed_with_warnings')).toBe('已完成');
+  expect(runStageLabel('failed')).toBe('失败');
   expect(runEventLabel('retrieval.degraded')).toBe('文献获取：部分降级');
   expect(runEventCountLabel('candidate_count')).toBe('候选数');
 });
