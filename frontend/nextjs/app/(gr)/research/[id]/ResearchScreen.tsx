@@ -13,7 +13,7 @@ import { Eye } from '../../_components/ui';
 
 type Saved = { status: 'loading' } | { status: 'found'; report: StoredReport } | { status: 'missing' } | { status: 'error' };
 
-const day = (when: number) => new Date(when).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+const day = (when: number) => new Date(when).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: 'numeric' });
 
 const toStored = (messages: ChatMessage[]): StoredChatMessage[] =>
   messages
@@ -121,14 +121,14 @@ export default function ResearchScreen({ id }: { id: string }) {
 
   if (saved.status === 'error') {
     return (
-      <Notice eyebrow="Report" title="Could not reach the backend to open this report">
-        <p>Check that the backend is running, then try again.</p>
+      <Notice eyebrow="综述" title="无法连接后端并打开这篇综述">
+        <p>请确认后端正在运行，然后重试。</p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <button type="button" className="gr-btn" onClick={() => setAttempt((n) => n + 1)}>
-            Try again
+            重试
           </button>
           <Link href="/history/reviews" className={textLink}>
-            Archive
+            综述历史
           </Link>
         </div>
       </Notice>
@@ -139,28 +139,28 @@ export default function ResearchScreen({ id }: { id: string }) {
     const pending = rememberedRun(id);
     if (pending) {
       return (
-        <Notice eyebrow="Interrupted" title={pending.question}>
-          <p>This research stopped when the page reloaded, before the report was finished. Your question and settings are kept.</p>
+        <Notice eyebrow="已中断" title={pending.question}>
+          <p>页面重新加载时，研究在综述完成前中断。你的问题和设置已保留。</p>
           <div className="mt-6 flex flex-wrap items-center gap-4">
             <button type="button" className="gr-btn" onClick={() => restart(pending.question, pending.brief)}>
-              Start again
+              重新开始
             </button>
             <Link href="/reviews/new" className={textLink}>
-              New research
+              新建研究
             </Link>
           </div>
         </Notice>
       );
     }
     return (
-      <Notice eyebrow="Report" title="This report isn't on the backend">
-        <p>It may have been deleted, or saved by a different backend.</p>
+      <Notice eyebrow="综述" title="后端中没有这篇综述">
+        <p>它可能已被删除，或由其他后端保存。</p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <Link href="/history/reviews" className="gr-btn">
-            Open the archive
+            打开综述历史
           </Link>
           <Link href="/reviews/new" className={textLink}>
-            New research
+            新建研究
           </Link>
         </div>
       </Notice>
@@ -169,7 +169,7 @@ export default function ResearchScreen({ id }: { id: string }) {
 
   return (
     <div role="status" className="mx-auto max-w-[720px] px-5 pt-[12vh] font-code text-[11.5px] uppercase tracking-[0.14em] text-ink-3 sm:px-8">
-      Opening the report
+      正在打开综述
     </div>
   );
 }

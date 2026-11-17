@@ -28,12 +28,12 @@ it('keeps report suggestions and typed chat in the real preview component offlin
   setup(); window.history.replaceState({}, '', '/mocks/report?tab=chat');
   const element = document.createElement('div'); const root = createRoot(element);
   await act(async () => root.render(<MockMode archive={archive}><MockRun at={9999} tab="chat" /></MockMode>));
-  const suggestion = [...element.querySelectorAll('button')].find(button => button.textContent === 'What could stop the rally?')!;
+  const suggestion = [...element.querySelectorAll('button')].find(button => button.textContent === '哪些因素可能改变当前结论？')!;
   expect(suggestion).toBeDefined();
   await act(async () => suggestion.click());
   expect(fetch).not.toHaveBeenCalled();
-  expect(element.textContent).toContain('Preview response:');
-  const textarea = element.querySelector<HTMLTextAreaElement>('textarea[placeholder="Ask about this report"]')!;
+  expect(element.textContent).toContain('预览回复：');
+  const textarea = element.querySelector<HTMLTextAreaElement>('textarea[placeholder="围绕这篇综述提问"]')!;
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(textarea, 'A different question'); textarea.dispatchEvent(new Event('input', { bubbles: true })); });
   await act(async () => textarea.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(fetch).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ it('hydrates the offline mock home without a server/client mismatch', async () =
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
   let root!: ReturnType<typeof hydrateRoot>;
   await act(async () => { root = hydrateRoot(element, tree); });
-  expect(element.textContent).toContain('Cannot reach the backend');
+  expect(element.textContent).toContain('无法连接后端');
   expect(errors).not.toHaveBeenCalled();
   await act(async () => root.unmount()); element.remove(); errors.mockRestore(); vi.unstubAllGlobals();
 });
@@ -72,7 +72,7 @@ it('preserves the normal report chat and image behavior outside mock mode', asyn
   const element = document.createElement('div'); const root = createRoot(element);
   await act(async () => root.render(<><MockRun at={9999} tab="chat" /><Favicon domain="example.com" /></>));
   expect(element.querySelector('img[src^="https://www.google.com/s2/favicons"]')).not.toBeNull();
-  const suggestion = [...element.querySelectorAll('button')].find(button => button.textContent === 'What could stop the rally?')!;
+  const suggestion = [...element.querySelectorAll('button')].find(button => button.textContent === '哪些因素可能改变当前结论？')!;
   await act(async () => suggestion.click());
   expect(fetch).toHaveBeenCalledOnce();
   expect(vi.mocked(fetch).mock.calls[0][0]).toBe('/api/chat');

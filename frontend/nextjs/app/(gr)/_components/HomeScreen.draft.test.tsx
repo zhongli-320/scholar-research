@@ -35,6 +35,8 @@ it.each(['backend', 'mcp'])('keeps the question and attachments through the %s s
     expect(router.push).toHaveBeenLastCalledWith(href, expect.anything());
   };
   await render(<HomeScreen />);
+  expect(container.textContent).toContain('想研究什么？');
+  expect(container.textContent).not.toContain('What should we research?');
   const question = container.querySelector('textarea')!;
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(question, 'My research question'); question.dispatchEvent(new Event('input', { bubbles: true })); });
   const picker = container.querySelector<HTMLInputElement>('input[type=file]')!;

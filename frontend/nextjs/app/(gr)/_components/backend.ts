@@ -49,12 +49,12 @@ async function upload(file: File) {
   const body = new FormData();
   body.append('file', file);
   const res = await fetch(`${state.host.replace(/\/+$/, '')}/upload/`, { method: 'POST', body });
-  if (!res.ok) throw new Error(`Could not upload ${file.name}. The backend answered with ${res.status}.`);
+  if (!res.ok) throw new Error(`无法上传 ${file.name}，后端返回状态码 ${res.status}。`);
 }
 
 async function remove(name: string) {
   const res = await fetch(`${state.host.replace(/\/+$/, '')}/files/${encodeURIComponent(name)}`, { method: 'DELETE' });
-  if (!res.ok && res.status !== 404) throw new Error(`Could not remove ${name}. The backend answered with ${res.status}.`);
+  if (!res.ok && res.status !== 404) throw new Error(`无法移除 ${name}，后端返回状态码 ${res.status}。`);
   set({ documents: state.documents.filter((d) => d !== name) });
 }
 

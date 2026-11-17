@@ -3,14 +3,14 @@ import { FaviconStack } from './Favicon';
 import { clock } from './ui';
 
 export const statusWord: Record<RunState['status'], string> = {
-  idle: 'Ready',
-  researching: 'Researching',
-  review: 'Waiting for you',
-  drafting: 'Drafting',
-  writing: 'Writing',
-  done: 'Done',
-  stopped: 'Stopped',
-  failed: 'Failed',
+  idle: '准备就绪',
+  researching: '检索中',
+  review: '等待你的确认',
+  drafting: '起草中',
+  writing: '写作中',
+  done: '已完成',
+  stopped: '已停止',
+  failed: '失败',
 };
 
 export const stageTime = (stage: Stage, now: number) => {
@@ -86,7 +86,7 @@ export function StageStrip({ run }: { run: RunState }) {
   const active = run.stages.filter((s) => s.status === 'active');
   const detail = [...active].reverse().find((s) => s.detail && s.detail !== statusWord[run.status])?.detail;
   const line = failed
-    ? `${statusWord[run.status]} at ${failed.label}`
+    ? `${statusWord[run.status]}：${failed.label}`
     : [statusWord[run.status], detail ?? active.at(-1)?.label].filter(Boolean).join(' · ');
   return (
     <span className="flex items-center gap-4">

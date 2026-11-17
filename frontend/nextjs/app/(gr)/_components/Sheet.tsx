@@ -74,9 +74,9 @@ function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[
   if (!shown.length) return null;
 
   return (
-    <figure className="gr-in mt-10" aria-label="Figures from the sources">
+    <figure className="gr-in mt-10" aria-label="资料来源中的图表">
       <div className="flex items-baseline justify-between border-b border-ink pb-2.5">
-        <p className="gr-meta">Figures from the sources</p>
+        <p className="gr-meta">资料来源中的图表</p>
         <p className="font-code text-[11px] tabular-nums text-ink-3">{usable.length}</p>
       </div>
       <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:grid-rows-2">
@@ -89,7 +89,7 @@ function Plate({ images, sources, onOpen }: { images: string[]; sources: Source[
               <button
                 type="button"
                 onClick={() => onOpen(index)}
-                aria-label={last ? `Open figure ${index + 1}, ${more} more` : `Open figure ${index + 1}`}
+                aria-label={last ? `打开图表 ${index + 1}，另有 ${more} 张` : `打开图表 ${index + 1}`}
                 className={`group relative block w-full overflow-hidden bg-paper-deep outline-offset-2 ${i === 0 ? 'aspect-[16/10] sm:aspect-auto sm:h-full' : 'aspect-[4/3]'}`}
               >
                 {mock ? <span aria-hidden="true" className="absolute inset-0 bg-paper-deep" /> : <img
@@ -180,12 +180,12 @@ export function useReportHtml(run: RunState) {
 }
 
 const questionWord: Record<Question['status'], string> = {
-  queued: 'queued',
-  searching: 'searching',
-  reading: 'reading',
-  done: 'done',
-  empty: 'nothing found',
-  stopped: 'stopped',
+  queued: '排队中',
+  searching: '检索中',
+  reading: '阅读中',
+  done: '已完成',
+  empty: '未找到结果',
+  stopped: '已停止',
 };
 
 function Plan({ run }: { run: RunState }) {
@@ -220,7 +220,7 @@ function Feed({ run, live }: { run: RunState; live: boolean }) {
   return (
     <section className="mt-9" aria-labelledby="feed-h">
       <Eye>
-        <span id="feed-h">Now</span>
+        <span id="feed-h">当前进展</span>
       </Eye>
       <p role="status" className="sr-only">
         {latest.text} {latest.quote}
@@ -247,7 +247,7 @@ function Feed({ run, live }: { run: RunState; live: boolean }) {
                   {a.quote && <span className="min-w-0 truncate font-display text-[15.5px] text-ink-2">“{a.quote}”</span>}
                 </p>
                 {batch.length > 0 && (
-                  <ul className="mt-2 flex flex-wrap gap-1.5 pl-[15px]" aria-label="Pages being read">
+                  <ul className="mt-2 flex flex-wrap gap-1.5 pl-[15px]" aria-label="正在阅读的页面">
                     {batch.slice(0, 4).map((s, j) => (
                       <li
                         key={s.n}
@@ -290,8 +290,8 @@ const Waiting = ({ children }: { children: React.ReactNode }) => (
 
 function failureHint(error: string) {
   if (/api_key|OPENAI_API_KEY|credentials/i.test(error))
-    return 'The backend has no OpenAI API key. Add OPENAI_API_KEY to the backend .env file, restart it, and try again.';
-  return 'The backend stopped before the report was written. Your question and settings are kept, so you can try again.';
+    return '后端没有 OpenAI API 密钥。请在后端 .env 文件中添加 OPENAI_API_KEY，重启后再试。';
+  return '后端在综述写入前停止。你的问题和设置已保留，可以再次尝试。';
 }
 
 function Stopped({ run, onRestart }: { run: RunState; onRestart?: () => void }) {
@@ -299,17 +299,17 @@ function Stopped({ run, onRestart }: { run: RunState; onRestart?: () => void }) 
   const links = useLinks();
   return (
     <div className="mt-8 bg-paper px-6 py-5 shadow-[inset_0_0_0_1px_rgba(29,25,21,0.26)]" role="status">
-      <Eye>Stopped{at ? ` at ${at}` : ''}</Eye>
+      <Eye>已停止{at ? `于${at}` : ''}</Eye>
       <p className="mt-4 max-w-[34em] text-[16px] leading-relaxed text-ink">
-        You stopped the research at {clock(run.elapsed)}.
-        {run.report && ' The draft so far is kept below, with its sources in the margin.'}
+        你在 {clock(run.elapsed)} 时停止了研究。
+        {run.report && ' 当前草稿保留在下方，资料来源显示在页边。'}
       </p>
       <div className="mt-5 flex flex-wrap items-center gap-4">
         <button type="button" className="gr-btn" onClick={onRestart}>
-          Start again
+          重新开始
         </button>
         <Link href={links.home} className="text-[14px] font-medium underline decoration-rule underline-offset-4 hover:decoration-rubric">
-          New research
+          新建研究
         </Link>
       </div>
     </div>
@@ -320,9 +320,9 @@ function Review({ review, onReply }: { review: PlanReview; onReply?: (notes: str
   const [notes, setNotes] = useState('');
   return (
     <section className="gr-in mt-10 bg-paper px-6 py-6 shadow-[inset_0_0_0_1px_#1A1612]" aria-labelledby="review-h">
-      <Eye>Your turn</Eye>
+      <Eye>请你确认</Eye>
       <h2 id="review-h" className="mt-4 max-w-[26em] font-display text-[1.35rem] font-semibold leading-snug tracking-[-0.01em]">
-        The editor planned {review.sections.length} sections. Change anything before the researchers start?
+        编辑器规划了 {review.sections.length} 个章节。研究开始前需要调整吗？
       </h2>
       <ol className="mt-5 border-t border-rule-soft">
         {review.sections.map((s, i) => (
@@ -333,21 +333,21 @@ function Review({ review, onReply }: { review: PlanReview; onReply?: (notes: str
         ))}
       </ol>
       <label className="mt-5 block">
-        <span className="sr-only">Notes for the editor</span>
+        <span className="sr-only">给编辑器的说明</span>
         <textarea
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add, drop or change a section. Leave empty if the plan works."
+          placeholder="可添加、删除或修改章节；若方案合适，请留空。"
           className="gr-input w-full resize-y bg-paper-hi px-4 py-3 text-[15px] leading-relaxed outline-none shadow-[inset_0_0_0_1px_rgba(29,25,21,0.26)] focus:shadow-[inset_0_0_0_1px_#1A1612]"
         />
       </label>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button type="button" className="gr-btn" onClick={() => onReply?.(null)}>
-          Start with this plan
+          按此方案开始
         </button>
         <button type="button" className="gr-btn-line h-11" disabled={!notes.trim()} onClick={() => onReply?.(notes.trim())}>
-          Send notes
+          发送修改意见
         </button>
       </div>
     </section>
@@ -363,10 +363,10 @@ function Byline({ run }: { run: RunState }) {
         <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 font-code text-[12px] text-ink-3 hover:text-ink">
           <FaviconStack domains={domainsBySources(run.sources)} max={5} />
           <span className="underline decoration-rule underline-offset-4">
-            {run.sources.length} sources, {run.questions.length} questions
+            {run.sources.length} 个来源，{run.questions.length} 个问题
           </span>
           <span className="tabular-nums">
-            {run.words.toLocaleString('en-US')} words · {readingMinutes(run.words)} min read
+            {run.words.toLocaleString('zh-CN')} 字 · 阅读约 {readingMinutes(run.words)} 分钟
           </span>
         </summary>
         <Plan run={run} />
@@ -376,10 +376,10 @@ function Byline({ run }: { run: RunState }) {
           <i className="h-[7px] w-[7px] animate-[gr-blink_1.2s_steps(2,jump-none)_infinite] bg-rubric" aria-hidden="true" />
           <span className="truncate">
             {now.action === 'writing'
-              ? `Writing “${now.title}”`
+              ? `正在写作“${now.title}”`
               : now.titles.length > 1
-                ? `Researching ${now.titles.length} sections at once`
-                : `Researching “${now.titles[0]}”`}
+                ? `正在同时研究 ${now.titles.length} 个章节`
+                : `正在研究“${now.titles[0]}”`}
           </span>
         </p>
       )}
@@ -412,8 +412,8 @@ function CiteCard({ source, at }: { source: Source; at: CardAt }) {
         </div>
       </div>
       <p className="mt-2.5 border-t border-rule-soft pt-2 font-code text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
-        Source {source.n}
-        {source.citations > 1 && ` · cited ${source.citations} times`}
+        来源 {source.n}
+        {source.citations > 1 && ` · 引用 ${source.citations} 次`}
       </p>
     </div>
   );
@@ -473,9 +473,9 @@ export default function Sheet({
   };
 
   return (
-    <article ref={sheet} className="gr-sheet px-6 pb-16 pt-8 sm:px-[72px] sm:pb-20 sm:pt-12" aria-label="Research report">
+    <article ref={sheet} className="gr-sheet px-6 pb-16 pt-8 sm:px-[72px] sm:pb-20 sm:pt-12" aria-label="研究综述">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <p className="gr-meta">Research report · {reportLabel}</p>
+        <p className="gr-meta">研究综述 · {reportLabel}</p>
         <p className="gr-meta">{date}</p>
       </header>
 
@@ -509,15 +509,15 @@ export default function Sheet({
 
           {run.status === 'failed' ? (
             <div className="mt-10 bg-paper px-6 py-5 shadow-[inset_0_0_0_1px_#B8381C]" role="alert">
-              <Eye>Stopped at {run.stages.find((s) => s.status === 'failed')?.label ?? 'start'}</Eye>
+              <Eye>停止于{run.stages.find((s) => s.status === 'failed')?.label ?? '启动阶段'}</Eye>
               <p className="mt-4 max-w-[34em] text-[16px] leading-relaxed text-ink">{failureHint(run.error ?? '')}</p>
               <p className="mt-3 break-words font-code text-[11.5px] leading-relaxed text-ink-3">{run.error}</p>
               <div className="mt-5 flex flex-wrap items-center gap-4">
                 <button type="button" className="gr-btn" onClick={onRestart}>
-                  Try again
+                  重试
                 </button>
                 <a href="https://docs.gptr.dev/docs/gpt-researcher/gptr/config" className="text-[14px] font-medium underline decoration-rule underline-offset-4 hover:decoration-rubric">
-                  Backend configuration
+                  后端配置
                 </a>
               </div>
             </div>
@@ -527,25 +527,25 @@ export default function Sheet({
             <>
               {run.status === 'stopped' && <Stopped run={run} onRestart={onRestart} />}
               <Feed run={run} live={live} />
-              <section className="mt-10" aria-label="The plan">
-                <Eye>{run.subqueries.length ? `The plan, ${run.subqueries.length} questions` : 'The plan'}</Eye>
+              <section className="mt-10" aria-label="研究方案">
+                <Eye>{run.subqueries.length ? `研究方案，共 ${run.subqueries.length} 个问题` : '研究方案'}</Eye>
                 {run.subqueries.length ? (
                   <Plan run={run} />
                 ) : (
-                  run.status !== 'stopped' && <Waiting>Splitting your question into research questions</Waiting>
+                  run.status !== 'stopped' && <Waiting>正在将你的问题拆分为研究问题</Waiting>
                 )}
               </section>
               {run.status === 'drafting' && (
-                <section className="mt-12" aria-label="Drafting">
-                  <Eye>Drafting</Eye>
+                <section className="mt-12" aria-label="起草中">
+                  <Eye>起草中</Eye>
                   <Waiting>
-                    The writer is reading {run.sources.length} sources and {run.pagesScraped} pages. The first paragraph takes a moment
+                    写作助手正在阅读 {run.sources.length} 个来源和 {run.pagesScraped} 个页面，首段生成需要一点时间
                   </Waiting>
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <FaviconStack domains={run.sources.map((s) => s.domain)} max={9} size="md" />
                     <span className="font-code text-[11px] text-ink-3">
-                      {new Set(run.sources.map((s) => s.domain)).size} sites
-                      {run.images.length > 0 && ` · ${run.images.length} figures`}
+                      {new Set(run.sources.map((s) => s.domain)).size} 个网站
+                      {run.images.length > 0 && ` · ${run.images.length} 张图表`}
                     </span>
                   </div>
                   <div className="mt-8 space-y-3" aria-hidden="true">

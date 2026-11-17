@@ -15,5 +15,7 @@ describe('literature home preview', () => {
     expect(html).not.toContain('查看全部');
     expect(html).toMatch(/<button type="submit"[^>]*disabled/);
     expect(html).toContain('预览模式');
+    expect(html).toContain('已完成');
+    expect(html).not.toContain('completed');
   });
 });

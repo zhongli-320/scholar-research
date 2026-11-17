@@ -52,22 +52,22 @@ export default function Lightbox({ images, index, onIndex, onClose }: { images: 
           {host(src) && <span className="normal-case tracking-normal"> · {host(src)}</span>}
         </p>
         <button ref={closeButton} type="button" onClick={onClose} className="gr-btn-line">
-          Close
+          关闭
         </button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center px-5" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        {mock ? <span className="bg-paper-deep p-10">Figure preview</span> : <img key={src} src={src} alt={`Figure ${index + 1} from the sources`} className="gr-in max-h-full max-w-[min(1100px,100%)] object-contain shadow-[0_40px_80px_-50px_rgba(29,25,21,0.6)]" />}
+        {mock ? <span className="bg-paper-deep p-10">图表预览</span> : <img key={src} src={src} alt={`来源中的图表 ${index + 1}`} className="gr-in max-h-full max-w-[min(1100px,100%)] object-contain shadow-[0_40px_80px_-50px_rgba(29,25,21,0.6)]" />}
       </div>
       <div className="flex items-center justify-between gap-4 px-5 py-4 sm:px-8">
         <a href={src} target="_blank" rel="noopener noreferrer" className="text-[13.5px] font-medium underline decoration-rule underline-offset-4 hover:decoration-rubric">
-          Open original
+          打开原图
         </a>
         {count > 1 && (
           <div className="flex gap-2">
-            <button type="button" onClick={() => go(-1)} className="gr-btn-line" aria-label="Previous figure">
+            <button type="button" onClick={() => go(-1)} className="gr-btn-line" aria-label="上一张图表">
               Previous
             </button>
-            <button type="button" onClick={() => go(1)} className="gr-btn-line" aria-label="Next figure">
+            <button type="button" onClick={() => go(1)} className="gr-btn-line" aria-label="下一张图表">
               Next
             </button>
           </div>

@@ -11,13 +11,13 @@ import { useBrief, type SettingsTab } from './preferences';
 const MCP_DOCS = 'https://docs.gptr.dev/docs/gpt-researcher/retrievers/mcp-configs';
 
 const TABS: { id: SettingsTab; label: string }[] = [
-  { id: 'research', label: 'Research' },
-  { id: 'mcp', label: 'MCP servers' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'backend', label: 'Backend' },
+  { id: 'research', label: '综述' },
+  { id: 'mcp', label: 'MCP 服务' },
+  { id: 'documents', label: '文档' },
+  { id: 'backend', label: '后端' },
 ];
 
-const STATUS_WORD: Record<BackendStatus, string> = { online: 'Online', offline: 'Offline', checking: 'Checking' };
+const STATUS_WORD: Record<BackendStatus, string> = { online: '在线', offline: '离线', checking: '检查中' };
 
 const plain = (label: string) => label.replace(/^(a|an|the) /, '').replace(/^./, (c) => c.toUpperCase());
 
@@ -77,16 +77,16 @@ function ResearchPanel({ brief, onChange }: { brief: BriefValue; onChange: (brie
   return (
     <>
       <p className="mb-6 text-[14px] leading-snug text-ink-2">
-        Defaults for new research. The sentence on the home page changes the same settings, for a quick change before you start.
+        新综述的默认选项。首页中的设置句也会同步修改这些选项。
       </p>
-      <Section title="Report">
-        <Radios name="report_type" label="Report" options={REPORT_TYPES} value={brief.report_type} onChange={(report_type) => onChange({ ...brief, report_type })} />
+      <Section title="综述类型">
+        <Radios name="report_type" label="综述类型" options={REPORT_TYPES} value={brief.report_type} onChange={(report_type) => onChange({ ...brief, report_type })} />
       </Section>
-      <Section title="Sources">
-        <Radios name="report_source" label="Sources" options={SOURCES} value={brief.report_source} onChange={(report_source) => onChange({ ...brief, report_source })} columns={3} />
+      <Section title="资料来源">
+        <Radios name="report_source" label="资料来源" options={SOURCES} value={brief.report_source} onChange={(report_source) => onChange({ ...brief, report_source })} columns={3} />
       </Section>
-      <Section title="Tone" hint={tone?.hint}>
-        <div role="radiogroup" aria-label="Tone" className="mt-4 flex flex-wrap gap-1.5">
+      <Section title="语气" hint={tone?.hint}>
+        <div role="radiogroup" aria-label="语气" className="mt-4 flex flex-wrap gap-1.5">
           {TONES.map((t) => (
             <label
               key={t.value}
@@ -94,12 +94,12 @@ function ResearchPanel({ brief, onChange }: { brief: BriefValue; onChange: (brie
               className="inline-flex h-8 cursor-pointer items-center bg-paper px-3 text-[13px] shadow-[inset_0_0_0_1px_rgba(29,25,21,0.2)] transition-colors hover:shadow-[inset_0_0_0_1px_rgba(29,25,21,0.5)] has-[:checked]:bg-ink has-[:checked]:text-paper-hi has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink"
             >
               <input type="radio" name="tone" value={t.value} checked={t.value === brief.tone} onChange={() => onChange({ ...brief, tone: t.value })} className="sr-only" />
-              {t.value}
+              {t.label}
             </label>
           ))}
         </div>
       </Section>
-      <Section title="Sites" hint={brief.report_source === 'local' ? 'Only applies when research reads the web.' : 'Only read these sites. Leave it empty to read any site.'}>
+      <Section title="网站" hint={brief.report_source === 'local' ? '仅在使用网络资料时生效。' : '仅检索这些网站；留空则检索任意网站。'}>
         <SitesEditor value={brief.domains} onChange={(domains) => onChange({ ...brief, domains })} />
       </Section>
     </>
@@ -115,19 +115,19 @@ function McpPanel({ brief, onChange }: { brief: BriefValue; onChange: (brief: Br
   return (
     <>
       <Section
-        title="Use MCP servers"
-        hint="Let the researchers query your own tools and data through the Model Context Protocol, next to the web."
-        aside={<Toggle checked={brief.mcp_enabled} onChange={(mcp_enabled) => onChange({ ...brief, mcp_enabled })} label="Use MCP servers" />}
+        title="使用 MCP 服务"
+        hint="除网络外，也允许研究智能体通过 MCP 查询你的工具和数据。"
+        aside={<Toggle checked={brief.mcp_enabled} onChange={(mcp_enabled) => onChange({ ...brief, mcp_enabled })} label="使用 MCP 服务" />}
       >
-        {!brief.mcp_enabled && <p className="mt-4 text-[13.5px] text-ink-3">Off. Research reads only the web and your documents.</p>}
+        {!brief.mcp_enabled && <p className="mt-4 text-[13.5px] text-ink-3">已关闭。研究仅使用网络和你的文档。</p>}
       </Section>
       {brief.mcp_enabled && (
         <>
-          <Section title="When to ask them">
-            <Radios name="mcp_strategy" label="When to ask the MCP servers" options={MCP_STRATEGIES} value={brief.mcp_strategy} onChange={(mcp_strategy) => onChange({ ...brief, mcp_strategy })} />
+          <Section title="调用时机">
+            <Radios name="mcp_strategy" label="何时调用 MCP 服务" options={MCP_STRATEGIES} value={brief.mcp_strategy} onChange={(mcp_strategy) => onChange({ ...brief, mcp_strategy })} />
           </Section>
-          <Section title="Servers" hint="Add a preset and fill in its keys, or paste your own list.">
-            <div className="mt-4 grid gap-2 sm:grid-cols-3" role="group" aria-label="Presets">
+          <Section title="服务" hint="添加预设并填写密钥，或粘贴自定义列表。">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3" role="group" aria-label="预设">
               {MCP_PRESETS.map((p) => {
                 const added = check.servers.some((s) => s.name === p.server.name);
                 return (
@@ -155,14 +155,14 @@ function McpPanel({ brief, onChange }: { brief: BriefValue; onChange: (brief: Br
             </div>
             <div className="mt-5 flex items-end justify-between gap-3">
               <label htmlFor={`${id}-json`} className="gr-meta">
-                Config, as JSON
+                JSON 配置
               </label>
               <div className="flex gap-4 text-[13px] font-medium">
                 <button type="button" onClick={() => setConfigs(formatMcp(brief.mcp_configs))} disabled={check.state !== 'ready'} className="text-ink-2 hover:text-ink disabled:opacity-40">
-                  Format
+                  格式化
                 </button>
                 <button type="button" onClick={() => setConfigs('')} disabled={!brief.mcp_configs.trim()} className="text-ink-2 hover:text-ink disabled:opacity-40">
-                  Clear
+                  清空
                 </button>
               </div>
             </div>
@@ -179,14 +179,14 @@ function McpPanel({ brief, onChange }: { brief: BriefValue; onChange: (brief: Br
             />
             <div id={`${id}-check`} role="status" className="mt-2 space-y-1 font-code text-[11.5px] leading-relaxed">
               <p className={check.state === 'invalid' ? 'text-rubric' : 'text-ink-3'}>{check.message}</p>
-              {placeholders.length > 0 && <p className="text-rubric">Replace the placeholder values before you run: {placeholders.join(', ')}.</p>}
+              {placeholders.length > 0 && <p className="text-rubric">运行前请替换占位值：{placeholders.join('、')}。</p>}
             </div>
             <p className="mt-4 text-[13px] leading-snug text-ink-3">
-              Each server needs a <code className="font-code text-[12px] text-ink-2">name</code>, and either a <code className="font-code text-[12px] text-ink-2">command</code> with{' '}
-              <code className="font-code text-[12px] text-ink-2">args</code> and <code className="font-code text-[12px] text-ink-2">env</code>, or a{' '}
-              <code className="font-code text-[12px] text-ink-2">connection_url</code>.{' '}
+              每个服务都需要 <code className="font-code text-[12px] text-ink-2">name</code>，并提供带{' '}
+              <code className="font-code text-[12px] text-ink-2">args</code>、<code className="font-code text-[12px] text-ink-2">env</code> 的 <code className="font-code text-[12px] text-ink-2">command</code>，或提供{' '}
+              <code className="font-code text-[12px] text-ink-2">connection_url</code>。{' '}
               <a href={MCP_DOCS} target="_blank" rel="noopener noreferrer" className="font-medium text-ink underline decoration-rule underline-offset-4 hover:text-rubric">
-                How MCP configs work
+                MCP 配置说明
               </a>
             </p>
           </Section>
@@ -205,10 +205,10 @@ function DocumentsPanel({ brief, onChange }: { brief: BriefValue; onChange: (bri
 
   if (backend.status !== 'online') {
     return (
-      <Section title="Documents on the backend" hint={backend.status === 'checking' ? 'Checking the connection.' : 'The backend is not reachable, so its documents cannot be listed.'}>
+      <Section title="后端文档" hint={backend.status === 'checking' ? '正在检查连接。' : '后端不可用，无法列出文档。'}>
         {backend.status === 'offline' && (
           <Link href="/settings?tab=gpt-researcher&section=backend" className="gr-btn-line mt-4">
-            Backend settings
+            后端设置
           </Link>
         )}
       </Section>
@@ -242,12 +242,12 @@ function DocumentsPanel({ brief, onChange }: { brief: BriefValue; onChange: (bri
   const docs = backend.documents;
   return (
     <Section
-      title="Documents on the backend"
-      hint="Research reads these when its sources include your documents."
+      title="后端文档"
+      hint="资料来源包含你的文档时，研究会读取这些文件。"
       aside={
         <>
           <button type="button" className="gr-btn-line flex-none" onClick={() => picker.current?.click()} disabled={uploading > 0}>
-            {uploading ? 'Uploading' : '+ Add files'}
+            {uploading ? '正在上传' : '+ 添加文件'}
           </button>
           <input
             ref={picker}
@@ -266,7 +266,7 @@ function DocumentsPanel({ brief, onChange }: { brief: BriefValue; onChange: (bri
       }
     >
       <p className="sr-only" role="status">
-        {uploading ? `Uploading ${uploading} file${uploading === 1 ? '' : 's'}` : ''}
+        {uploading ? `正在上传 ${uploading} 个文件` : ''}
       </p>
       {problem && (
         <p role="alert" className="mt-4 text-[13.5px] leading-snug text-rubric">
@@ -275,37 +275,37 @@ function DocumentsPanel({ brief, onChange }: { brief: BriefValue; onChange: (bri
       )}
       {docs.length > 0 && brief.report_source === 'web' && (
         <p className="mt-4 text-[13.5px] leading-snug text-ink-2">
-          Research reads only the web right now.{' '}
+          当前研究仅使用网络。{' '}
           <button type="button" className="font-medium underline decoration-rule underline-offset-4 hover:text-rubric" onClick={() => onChange({ ...brief, report_source: 'hybrid' })}>
-            Read these documents too
+            同时读取这些文档
           </button>
         </p>
       )}
       {docs.length ? (
-        <ul className="mt-4 border-t border-rule-soft" aria-label="Documents">
+        <ul className="mt-4 border-t border-rule-soft" aria-label="文档">
           {docs.map((name) => (
             <li key={name} className="flex min-h-[48px] items-center justify-between gap-4 border-b border-rule-soft py-2">
               <span className="min-w-0 truncate text-[14px] font-medium">{name}</span>
               {confirming === name ? (
                 <span className="flex flex-none items-center gap-3 text-[13px]">
-                  <span className="text-ink-3">Remove from the backend?</span>
+                  <span className="text-ink-3">从后端移除？</span>
                   <button type="button" className="font-medium text-rubric hover:underline" onClick={() => void remove(name)}>
-                    Remove
+                    移除
                   </button>
                   <button type="button" className="font-medium text-ink-2 hover:text-ink" onClick={() => setConfirming(null)}>
-                    Keep
+                    保留
                   </button>
                 </span>
               ) : (
-                <button type="button" aria-label={`Remove ${name}`} className="flex-none text-[13px] font-medium text-ink-3 hover:text-rubric" onClick={() => setConfirming(name)}>
-                  Remove
+                <button type="button" aria-label={`移除 ${name}`} className="flex-none text-[13px] font-medium text-ink-3 hover:text-rubric" onClick={() => setConfirming(name)}>
+                  移除
                 </button>
               )}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-4 text-[13.5px] leading-snug text-ink-3">No documents yet. Add PDFs, Word files, spreadsheets or text, and research can read them.</p>
+        <p className="mt-4 text-[13.5px] leading-snug text-ink-3">尚无文档。添加 PDF、Word、表格或文本文件后，研究即可读取。</p>
       )}
     </Section>
   );
@@ -315,17 +315,17 @@ function BackendPanel() {
   const backend = useBackend();
   const [draft, setDraft] = useState(backend.host);
   return (
-    <Section title="Python backend" hint="Where this browser sends research. Saved in this browser.">
+    <Section title="Python 后端" hint="浏览器会将研究请求发送到这里，地址保存在本浏览器中。">
       <p className="mt-4 flex items-center gap-2.5 text-[14px] leading-snug text-ink-2" role="status">
         <i
           className={`h-2 w-2 flex-none ${backend.status === 'online' ? 'bg-ink' : backend.status === 'offline' ? 'bg-rubric' : 'animate-[gr-blink_1s_steps(2,jump-none)_infinite] bg-ink-3'}`}
           aria-hidden="true"
         />
         {backend.status === 'online'
-          ? `Connected. ${backend.documents.length} document${backend.documents.length === 1 ? '' : 's'} on the backend.`
+          ? `已连接，后端有 ${backend.documents.length} 个文档。`
           : backend.status === 'offline'
-            ? 'Not reachable. Start it from the repo with python main.py, or point to another address.'
-            : 'Checking the connection.'}
+            ? '无法连接。请在项目目录运行 python main.py，或填写其他地址。'
+            : '正在检查连接。'}
       </p>
       <form
         className="mt-4 flex gap-2"
@@ -335,7 +335,7 @@ function BackendPanel() {
         }}
       >
         <label className="min-w-0 flex-1">
-          <span className="sr-only">Backend address</span>
+          <span className="sr-only">后端地址</span>
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -344,13 +344,13 @@ function BackendPanel() {
           />
         </label>
         <button type="submit" className="gr-btn-line h-10">
-          Connect
+          连接
         </button>
       </form>
       <div className="mt-3 flex items-center justify-between gap-4 text-[12.5px] text-ink-3">
-        <span>Leave it empty to use the default.</span>
+        <span>留空以使用默认地址。</span>
         <button type="button" onClick={() => void backend.check()} className="font-medium text-ink-2 hover:text-ink">
-          Check again
+          重新检查
         </button>
       </div>
     </Section>
@@ -363,12 +363,12 @@ export function ResearcherSettings({ tab }: { tab: SettingsTab }) {
   const mcp = checkMcp(brief.mcp_configs);
   const hints: Record<SettingsTab, string> = {
     research: reportLabel(brief.report_type),
-    mcp: !brief.mcp_enabled ? 'Off' : mcp.state === 'invalid' ? 'Fix' : String(mcp.servers.length),
+    mcp: !brief.mcp_enabled ? '关闭' : mcp.state === 'invalid' ? '需修正' : String(mcp.servers.length),
     documents: backend.status === 'online' ? String(backend.documents.length) : '–',
     backend: STATUS_WORD[backend.status],
   };
   return <div className="sm:grid sm:grid-cols-[200px_minmax(0,1fr)]">
-    <nav aria-label="Settings sections" className="flex overflow-x-auto border-b border-rule-soft sm:flex-col sm:border-b-0 sm:border-r">
+    <nav aria-label="设置栏目" className="flex overflow-x-auto border-b border-rule-soft sm:flex-col sm:border-b-0 sm:border-r">
       {TABS.map((t) => <Link key={t.id} href={`/settings?tab=gpt-researcher&section=${t.id}`} aria-current={t.id === tab ? 'page' : undefined} className="flex justify-between gap-3 whitespace-nowrap px-4 py-3 text-sm font-medium aria-[current=page]:text-rubric">{t.label}<span className="font-code text-ink-3">{hints[t.id]}</span></Link>)}
     </nav>
     <div className="px-5 py-6 sm:px-8">
@@ -376,7 +376,7 @@ export function ResearcherSettings({ tab }: { tab: SettingsTab }) {
       {tab === 'mcp' && <McpPanel brief={brief} onChange={setBrief} />}
       {tab === 'documents' && <DocumentsPanel brief={brief} onChange={setBrief} />}
       {tab === 'backend' && <BackendPanel />}
-      <p className="mt-8 text-[12.5px] text-ink-3">Saved in this browser as you go. New research uses these settings.</p>
+      <p className="mt-8 text-[12.5px] text-ink-3">修改会自动保存在本浏览器中，新研究将使用这些设置。</p>
     </div>
   </div>;
 }

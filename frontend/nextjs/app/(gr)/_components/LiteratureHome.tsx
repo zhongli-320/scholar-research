@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createRun, listHistory, listSources, PaperSeekApiError } from '@/lib/paperseek/client';
 import { latestSearch } from '@/lib/paperseek/history';
 import type { PaperSeekRun, PaperSeekSource } from '@/lib/paperseek/types';
+import { runStatusLabel } from '@/lib/paperseek/status';
 import { Arrow, Eye } from './ui';
 
 type HomeData = { sources: PaperSeekSource[]; recent: PaperSeekRun | null };
@@ -103,7 +104,7 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
         </details>
       </form>
       <section className="mt-14 border-t border-rule-soft pt-4" aria-labelledby="default-source"><h2 id="default-source" className="gr-meta">默认数据源</h2><p className="mt-3 text-sm">{defaultSource?.label ?? 'OpenAlex'} · 可在 <Link href="/settings?tab=paperseek" className="underline underline-offset-4">设置</Link> 中修改。</p></section>
-      <section className="mt-12" aria-labelledby="recent-search"><div className="flex items-baseline justify-between border-b border-ink pb-3"><h2 id="recent-search" className="gr-meta">最近检索</h2></div>{recent ? <Link href={`/literature/${encodeURIComponent(recent.id)}`} className="block border-b border-rule-soft py-4 hover:text-rubric"><span className="font-display text-lg font-semibold">{recent.display_title || recent.question}</span><span className="mt-2 block text-sm text-ink-3">{recent.status} · {recent.result_count} 条结果 · {sources.find((item) => item.id === recent.source)?.label ?? recent.source} · 查看 →</span></Link> : !historyError && <p className="py-4 text-sm text-ink-3">暂无检索记录。</p>}</section>
+      <section className="mt-12" aria-labelledby="recent-search"><div className="flex items-baseline justify-between border-b border-ink pb-3"><h2 id="recent-search" className="gr-meta">最近检索</h2></div>{recent ? <Link href={`/literature/${encodeURIComponent(recent.id)}`} className="block border-b border-rule-soft py-4 hover:text-rubric"><span className="font-display text-lg font-semibold">{recent.display_title || recent.question}</span><span className="mt-2 block text-sm text-ink-3">{runStatusLabel(recent.status)} · {recent.result_count} 条结果 · {sources.find((item) => item.id === recent.source)?.label ?? recent.source} · 查看 →</span></Link> : !historyError && <p className="py-4 text-sm text-ink-3">暂无检索记录。</p>}</section>
     </main>
   );
 }

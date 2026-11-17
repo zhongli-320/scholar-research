@@ -27,11 +27,11 @@ const bare = (url: string) => url.replace(/^https?:\/\//, '');
 export function Connection() {
   const backend = useBackend();
   const mock = usePathname().startsWith('/mocks');
-  const label = backend.status === 'online' ? bare(backend.host) : backend.status;
+  const label = backend.status === 'online' ? bare(backend.host) : backend.status === 'offline' ? '离线' : '检查中';
   return (
     <Link
       href={mock ? '/mocks/settings?tab=gpt-researcher&section=backend' : '/settings?tab=gpt-researcher&section=backend'}
-      aria-label={`Backend: ${label}`}
+      aria-label={`后端：${label}`}
       className={`inline-flex h-8 items-center gap-2.5 font-code text-[11px] tracking-[0.06em] transition-colors ${
         backend.status === 'offline' ? 'text-rubric' : 'text-ink-3 hover:text-ink'
       }`}
@@ -40,7 +40,7 @@ export function Connection() {
         className={`h-2 w-2 ${backend.status === 'online' ? 'bg-ink' : backend.status === 'offline' ? 'bg-rubric' : 'animate-[gr-blink_1s_steps(2,jump-none)_infinite] bg-ink-3'}`}
         aria-hidden="true"
       />
-      <span>Backend</span>
+      <span>后端</span>
       <span className="underline decoration-rule underline-offset-4">{label}</span>
     </Link>
   );

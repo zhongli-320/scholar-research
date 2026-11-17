@@ -4,7 +4,7 @@ import { Favicon } from './Favicon';
 export const sourcesSummary = (run: RunState) => {
   const sites = new Set(run.sources.map((s) => s.domain)).size;
   if (!run.sources.length) return '';
-  return `${run.sources.length} sources${sites < run.sources.length ? ` · ${sites} sites` : ''}`;
+  return `${run.sources.length} 个来源${sites < run.sources.length ? ` · ${sites} 个网站` : ''}`;
 };
 
 export default function Sources({ run, highlight, onHighlight }: { run: RunState; highlight?: number; onHighlight: (n?: number) => void }) {
@@ -12,9 +12,9 @@ export default function Sources({ run, highlight, onHighlight }: { run: RunState
   const live = run.status === 'researching';
 
   return (
-    <section aria-label="Sources">
+    <section aria-label="来源">
       {run.sources.length === 0 ? (
-        <p className="py-4 text-[13.5px] leading-snug text-ink-3">Sources appear here as the researchers find them.</p>
+        <p className="py-4 text-[13.5px] leading-snug text-ink-3">找到来源后会在这里显示。</p>
       ) : (
         <ol>
           {run.sources.map((s) => {
@@ -39,8 +39,8 @@ export default function Sources({ run, highlight, onHighlight }: { run: RunState
                     <span className="block truncate font-code text-[10.5px] leading-relaxed text-ink-3">{s.path || '/'}</span>
                   </span>
                   {s.citations > 0 ? (
-                    <span className="pt-[3px] font-code text-[10.5px] tabular-nums text-rubric" title={`Cited ${s.citations} times`}>
-                      {s.citations}×<span className="sr-only"> cited</span>
+                    <span className="pt-[3px] font-code text-[10.5px] tabular-nums text-rubric" title={`引用 ${s.citations} 次`}>
+                      {s.citations}×<span className="sr-only"> 次引用</span>
                     </span>
                   ) : (
                     <span />

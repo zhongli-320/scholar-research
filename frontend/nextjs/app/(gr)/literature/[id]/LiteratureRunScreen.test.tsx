@@ -25,7 +25,8 @@ it('loads the existing run before subscribing and hides non-fatal warnings after
   const handlers = vi.mocked(openRunEvents).mock.calls[0][1];
   await act(async () => { handlers.onEvent({ run_id: 'a', sequence: 3, event_type: 'run.completed_with_warnings', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: {} }); });
   expect(getRun).toHaveBeenCalledTimes(2);
-  expect(container.textContent).toContain('completed_with_warnings');
+  expect(container.textContent).toContain('已完成');
+  expect(container.textContent).not.toContain('completed_with_warnings');
   expect(container.textContent).not.toContain('source_rate_limited');
   await act(async () => root.unmount());
 });
@@ -36,7 +37,7 @@ it('applies terminal failure before a failed refresh and offers same-run recover
   await act(async () => { root.render(<LiteratureRunScreen id="a" />); });
   const handlers = vi.mocked(openRunEvents).mock.calls[0][1];
   await act(async () => { handlers.onEvent({ run_id: 'a', sequence: 9, event_type: 'run.failed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: { code: 'TIMEOUT' } }); });
-  expect(container.textContent).toContain('failed'); expect(container.textContent).toContain('TIMEOUT');
+  expect(container.textContent).toContain('失败'); expect(container.textContent).toContain('TIMEOUT');
   expect(container.textContent).not.toContain('取消此检索');
   const retry = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!;
   await act(async () => retry.click());
@@ -58,7 +59,7 @@ it('shows terminal state while its state refresh is still pending', async () => 
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => { root.render(<LiteratureRunScreen id="a" />); });
   await act(async () => { vi.mocked(openRunEvents).mock.calls[0][1].onEvent({ run_id: 'a', sequence: 9, event_type: 'run.failed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: { code: 'TIMEOUT' } }); });
-  expect(container.textContent).toContain('状态：failed');
+  expect(container.textContent).toContain('状态：失败');
   expect(container.textContent).not.toContain('取消此检索');
   await act(async () => root.unmount());
 });
@@ -78,7 +79,7 @@ it('loads results only after recovering a completed run when state and results a
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => root.render(<LiteratureRunScreen id="a" />));
   await act(async () => vi.mocked(openRunEvents).mock.calls[0][1].onEvent({ run_id: 'a', sequence: 4, event_type: 'run.completed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: {} }));
-  expect(container.textContent).toContain('状态：completed');
+  expect(container.textContent).toContain('状态：已完成');
   expect(container.textContent).not.toContain('取消此检索');
   expect(getResults).not.toHaveBeenCalled(); expect(getCitationMap).not.toHaveBeenCalled(); expect(listArtifacts).not.toHaveBeenCalled();
   online = true;
@@ -137,7 +138,7 @@ it('ignores a late retry of A after changing to B', async () => {
   await act(async () => Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!.click());
   await act(async () => root.render(<LiteratureRunScreen id="b" />));
   await act(async () => finish({ ...base, id: 'a', question: 'a', status: 'failed' }));
-  expect(container.querySelector('h1')!.textContent).toBe('b'); expect(container.textContent).toContain('状态：running');
+  expect(container.querySelector('h1')!.textContent).toBe('b'); expect(container.textContent).toContain('状态：运行中');
   await act(async () => root.unmount());
 });
 
@@ -153,7 +154,7 @@ it('keeps recovery disabled while a cancellation is in flight', async () => {
   const retry = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!;
   expect(retry?.disabled).toBe(true);
   await act(async () => finish({ ...run, status: 'cancelled' }));
-  expect(container.textContent).toContain('状态：cancelled');
+  expect(container.textContent).toContain('状态：已取消');
   expect(container.textContent).not.toContain('正在取消');
   await act(async () => root.unmount());
 });

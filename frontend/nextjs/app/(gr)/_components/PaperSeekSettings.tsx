@@ -10,7 +10,10 @@ const optionNames: Record<string, string[]> = { openalex: ['openalex_email'], cr
 const scopes = ['models', 'ip_limited_sources', 'other_sources'];
 function value(form: FormData, key: string) { return String(form.get(key) || ''); }
 function connectionData(form: FormData): ConnectionInput { return { kind: value(form, 'kind') as ConnectionKind, provider: value(form, 'provider'), api_type: value(form, 'api_type'), base_url: value(form, 'base_url'), model: value(form, 'model'), api_key: value(form, 'api_key') }; }
-function testStatus(test: TestStatus) { return test.code ? `${test.status} (${test.code})` : test.status; }
+function testStatus(test: TestStatus) {
+  const status = { ok: '正常', failed: '失败', untested: '未测试' }[test.status] ?? test.status;
+  return test.code ? `${status} (${test.code})` : status;
+}
 
 export default function PaperSeekSettings() {
   const [settings, setSettings] = useState<PaperSeekWorkspaceSettings | null>(null);

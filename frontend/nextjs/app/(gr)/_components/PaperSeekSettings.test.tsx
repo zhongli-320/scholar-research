@@ -54,7 +54,7 @@ it('refreshes stored failed test status and displays the safe failure code', asy
   await click(button('测试数据源'));
   expect(api.loadPaperSeekSettings).toHaveBeenCalledTimes(2);
   expect(container.textContent).toContain('source_unavailable');
-  expect(container.querySelector('h3')?.textContent).toContain('failed (source_unavailable)');
+  expect(container.querySelector('h3')?.textContent).toContain('失败 (source_unavailable)');
 });
 
 it('requires at least one proxy scope before saving', async () => {

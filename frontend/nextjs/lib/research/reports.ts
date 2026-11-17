@@ -69,8 +69,8 @@ export function summarize(report: StoredReport): ReportRow {
     title: reportTitle(run),
     question: report.question ?? '',
     type: reportLabel(report.brief?.report_type),
-    date: when.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    month: when.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+    date: when.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
+    month: when.toLocaleDateString('zh-CN', { month: 'long', year: 'numeric' }),
     timestamp: when.getTime(),
     sources: run.sources.length,
     words: run.words,
@@ -80,7 +80,7 @@ export function summarize(report: StoredReport): ReportRow {
 }
 
 const json = async <T>(res: Response): Promise<T> => {
-  if (!res.ok) throw new Error(`The backend answered with ${res.status}.`);
+  if (!res.ok) throw new Error(`后端返回状态码 ${res.status}。`);
   return (await res.json()) as T;
 };
 
@@ -100,7 +100,7 @@ export const updateReport = async (id: string, patch: Partial<StoredReport>) =>
 
 export const deleteReport = async (id: string, keepalive = false) => {
   const res = await fetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE', keepalive });
-  if (!res.ok && res.status !== 404) throw new Error(`The backend answered with ${res.status}.`);
+  if (!res.ok && res.status !== 404) throw new Error(`后端返回状态码 ${res.status}。`);
 };
 
 interface ReportsState {

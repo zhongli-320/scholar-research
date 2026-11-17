@@ -37,12 +37,12 @@ const Chevron = ({ open }: { open: boolean }) => (
 function Receipt({ run }: { run: RunState }) {
   const sites = new Set(run.sources.map((s) => s.domain)).size;
   const rows: [string, string][] = [
-    ['Reading time', `${readingMinutes(run.words)} min`],
-    ['Questions', String(run.subqueries.length)],
-    ['Pages read', String(run.pagesScraped)],
-    ...(run.images.length ? ([['Figures', String(run.images.length)]] as [string, string][]) : []),
-    ...(run.cost ? ([['Cost', `$${run.cost.toFixed(3)}`]] as [string, string][]) : []),
-    ...(run.agent ? ([['Agent', run.agent]] as [string, string][]) : []),
+    ['阅读时间', `${readingMinutes(run.words)} 分钟`],
+    ['问题数', String(run.subqueries.length)],
+    ['已读页面', String(run.pagesScraped)],
+    ...(run.images.length ? ([['图片', String(run.images.length)]] as [string, string][]) : []),
+    ...(run.cost ? ([['费用', `$${run.cost.toFixed(3)}`]] as [string, string][]) : []),
+    ...(run.agent ? ([['智能体', run.agent]] as [string, string][]) : []),
   ];
   const timed = run.stages.flatMap((s) => (s.startedAt !== undefined && s.endedAt !== undefined && s.endedAt > s.startedAt ? [{ ...s, took: s.endedAt - s.startedAt }] : []));
   const longest = Math.max(...timed.map((s) => s.took));
@@ -50,18 +50,18 @@ function Receipt({ run }: { run: RunState }) {
     <div>
       <div className="grid grid-cols-2 gap-3 border-b border-rule-soft pb-4">
         <p>
-          <span className="block font-code text-[26px] font-medium leading-none tabular-nums tracking-[-0.03em]">{run.words.toLocaleString('en-US')}</span>
-          <span className="mt-2 block font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">Words</span>
+          <span className="block font-code text-[26px] font-medium leading-none tabular-nums tracking-[-0.03em]">{run.words.toLocaleString('zh-CN')}</span>
+          <span className="mt-2 block font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">字数</span>
         </p>
         <p>
           <span className="block font-code text-[26px] font-medium leading-none tabular-nums tracking-[-0.03em]">{run.elapsed > 0 ? clock(run.elapsed) : '–'}</span>
-          <span className="mt-2 block font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">Run time</span>
+          <span className="mt-2 block font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">运行时间</span>
         </p>
       </div>
       <div className="flex items-center gap-3 border-b border-rule-soft py-3">
         <FaviconStack domains={domainsBySources(run.sources)} max={4} />
         <span className="text-[13px] leading-snug text-ink-2">
-          {run.sources.length} sources from {sites} sites
+          {run.sources.length} 个来源，来自 {sites} 个网站
         </span>
       </div>
       <dl>
@@ -74,8 +74,8 @@ function Receipt({ run }: { run: RunState }) {
       </dl>
       {timed.length > 0 && (
         <div className="mt-4">
-          <p className="font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">Time per stage</p>
-          <ol className="mt-2.5 space-y-1.5" aria-label="Time per stage">
+          <p className="font-code text-[10.5px] uppercase tracking-[0.14em] text-ink-3">各阶段用时</p>
+          <ol className="mt-2.5 space-y-1.5" aria-label="各阶段用时">
             {timed.map((s) => (
               <li key={s.id} className="grid grid-cols-[52px_minmax(0,1fr)_34px] items-center gap-2.5 font-code text-[10.5px] uppercase tracking-[0.08em]">
                 <span className="text-ink-2">{s.label}</span>
@@ -111,8 +111,8 @@ function Contents({ headings, addenda, onNavigate }: { headings: Heading[]; adde
   const items = headings.filter((h) => h.id !== 's-references' && !/^table of contents$/i.test(h.text));
   const link = 'group grid grid-cols-[24px_minmax(0,1fr)] gap-1 py-[7px] text-[13.5px] leading-snug text-ink-2 transition-colors hover:text-ink';
   return (
-    <nav aria-label="Report contents">
-      <p className="gr-meta border-b border-ink pb-3">Contents</p>
+    <nav aria-label="综述目录">
+      <p className="gr-meta border-b border-ink pb-3">目录</p>
       <ol className="mt-1">
         {items.map((h, i) => (
           <li key={h.id}>
@@ -127,7 +127,7 @@ function Contents({ headings, addenda, onNavigate }: { headings: Heading[]; adde
             <a href="#follow-ups" onClick={onNavigate} className={link}>
               <span className="pt-px font-code text-[10.5px] text-rubric">+</span>
               <span>
-                {addenda} follow up{addenda === 1 ? '' : 's'}
+                {addenda} 条追问
               </span>
             </a>
           </li>
@@ -167,7 +167,7 @@ function Progress({ run }: { run: RunState }) {
         <div
           id={id}
           role="dialog"
-          aria-label="Progress"
+          aria-label="研究进度"
           data-popover
           className={`${popoverPanel} gr-scroll left-0 max-h-[calc(100vh-150px)] w-[min(360px,calc(100vw-24px))] overflow-auto p-5`}
         >
@@ -184,14 +184,14 @@ function ThisRun({ run }: { run: RunState }) {
   return (
     <div ref={root} className="relative">
       <button type="button" aria-haspopup="dialog" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className="gr-btn-line gap-2.5">
-        This run
+        本次运行
         <span className="hidden font-code normal-case tracking-normal text-ink-3 sm:inline">
-          {run.words.toLocaleString('en-US')} words{run.elapsed > 0 && ` · ${clock(run.elapsed)}`}
+          {run.words.toLocaleString('zh-CN')} 字{run.elapsed > 0 && ` · ${clock(run.elapsed)}`}
         </span>
         <Chevron open={open} />
       </button>
       {open && (
-        <div id={id} role="dialog" aria-label="This run" data-popover className={`${popoverPanel} left-0 w-[min(340px,calc(100vw-24px))] p-5`}>
+        <div id={id} role="dialog" aria-label="本次运行" data-popover className={`${popoverPanel} left-0 w-[min(340px,calc(100vw-24px))] p-5`}>
           <Receipt run={run} />
         </div>
       )}
@@ -203,7 +203,7 @@ const FILES = [
   { key: 'pdf', label: 'PDF' },
   { key: 'docx', label: 'Word' },
   { key: 'md', label: 'Markdown' },
-  { key: 'json', label: 'Logs' },
+  { key: 'json', label: '日志' },
 ] as const;
 
 function Download({ run, sharePath }: { run: RunState; sharePath: string }) {
@@ -219,10 +219,10 @@ function Download({ run, sharePath }: { run: RunState; sharePath: string }) {
   return (
     <div ref={root} className="relative">
       <button type="button" aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className="gr-btn-line gap-2.5">
-        Download <Chevron open={open} />
+        下载 <Chevron open={open} />
       </button>
       {open && (
-        <div id={id} role="menu" aria-label="Download" data-popover className={`${popoverPanel} right-0 w-[240px] py-2`}>
+        <div id={id} role="menu" aria-label="下载" data-popover className={`${popoverPanel} right-0 w-[240px] py-2`}>
           {files.map((f) => (
             <a key={f.key} role="menuitem" href={`/${run.files[f.key]}`} target="_blank" rel="noopener noreferrer" className={item} onClick={() => setOpen(false)}>
               {f.label}
@@ -231,13 +231,13 @@ function Download({ run, sharePath }: { run: RunState; sharePath: string }) {
           ))}
           {files.length > 0 && <div className="my-1.5 h-px bg-rule-soft" />}
           <button type="button" role="menuitem" className={item} onClick={() => void copy('report')}>
-            {copied === 'report' ? 'Copied' : 'Copy as Markdown'}
+            {copied === 'report' ? '已复制' : '复制为 Markdown'}
           </button>
           <button type="button" role="menuitem" className={`${item} sm:hidden`} onClick={() => void copy('link')}>
-            {copied === 'link' ? 'Link copied' : 'Copy link'}
+            {copied === 'link' ? '链接已复制' : '复制链接'}
           </button>
           <span role="status" className="sr-only">
-            {copied === 'report' ? 'Report copied' : copied === 'link' ? 'Link copied' : ''}
+            {copied === 'report' ? '综述已复制' : copied === 'link' ? '链接已复制' : ''}
           </span>
         </div>
       )}
@@ -256,9 +256,9 @@ function Share({ path }: { path: string }) {
         window.setTimeout(() => setCopied(false), 1800);
       }}
     >
-      {copied ? 'Link copied' : 'Share'}
+      {copied ? '链接已复制' : '分享'}
       <span role="status" className="sr-only">
-        {copied ? 'Link copied' : ''}
+        {copied ? '链接已复制' : ''}
       </span>
     </button>
   );
@@ -269,9 +269,9 @@ function Addendum({ n, q, a, run, onRemove }: { n: number; q: string; a: string;
   return (
     <section className="gr-in mt-12 border-t border-rule pt-8">
       <div className="flex items-baseline justify-between gap-4">
-        <p className="gr-meta">Follow up {n} · from the chat</p>
+        <p className="gr-meta">追问 {n} · 来自问答</p>
         <button type="button" onClick={onRemove} className="font-code text-[10.5px] uppercase tracking-[0.1em] text-ink-3 hover:text-rubric">
-          Remove
+          移除
         </button>
       </div>
       <h3 className="mt-3 font-display text-[1.45rem] font-semibold leading-tight tracking-[-0.015em]">{q}</h3>
@@ -313,13 +313,13 @@ function Margin({
 }) {
   const asked = chat.messages.filter((m) => m.role === 'user').length;
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'sources', label: 'Sources' },
-    { id: 'chat', label: asked ? `Chat ${asked}` : 'Chat' },
+    { id: 'sources', label: '来源' },
+    { id: 'chat', label: asked ? `问答 ${asked}` : '问答' },
   ];
 
   return (
     <div id="margin" className="flex scroll-mt-20 flex-col min-[768px]:sticky min-[768px]:top-[136px] min-[768px]:max-h-[calc(100vh-152px)]">
-      <div role="tablist" aria-label="Sources and chat" className="flex items-end gap-5 border-b border-ink">
+      <div role="tablist" aria-label="来源和问答" className="flex items-end gap-5 border-b border-ink">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -372,7 +372,7 @@ function Drawer({ title, onClose, children }: { title: string; onClose: () => vo
       <div id="sidebar-drawer" className="gr-in gr-scroll absolute inset-y-0 left-0 w-[min(320px,86vw)] overflow-auto bg-paper px-5 pb-10 pt-5 shadow-[0_0_60px_-20px_rgba(26,22,18,0.6)]">
         <div className="mb-6 flex items-center justify-between">
           <p className="gr-meta">{title}</p>
-          <button ref={close} type="button" onClick={onClose} aria-label={`Close ${title.toLowerCase()}`} className="grid h-8 w-8 place-items-center text-[18px] text-ink-2 hover:text-rubric">
+          <button ref={close} type="button" onClick={onClose} aria-label={`关闭${title}`} className="grid h-8 w-8 place-items-center text-[18px] text-ink-2 hover:text-rubric">
             ×
           </button>
         </div>
@@ -442,7 +442,7 @@ export default function RunScreen({ run, label, date, sharePath, chatInitial = [
         }`}
       >
         {pinnedContents && (
-          <aside id="sidebar" aria-label="Contents" className="hidden min-[1200px]:block">
+          <aside id="sidebar" aria-label="目录" className="hidden min-[1200px]:block">
             <div className="gr-scroll sticky top-[136px] max-h-[calc(100vh-152px)] overflow-auto pb-6">{contents}</div>
           </aside>
         )}
@@ -456,8 +456,8 @@ export default function RunScreen({ run, label, date, sharePath, chatInitial = [
                   onClick={() => (wide ? setPinned(!pinned) : setDrawer(!drawer))}
                   aria-expanded={contentsOpen}
                   aria-controls={wide ? 'sidebar' : 'sidebar-drawer'}
-                  aria-label={`${contentsOpen ? 'Hide' : 'Show'} contents`}
-                  title={`${contentsOpen ? 'Hide' : 'Show'} contents`}
+                  aria-label={`${contentsOpen ? '隐藏' : '显示'}目录`}
+                  title={`${contentsOpen ? '隐藏' : '显示'}目录`}
                   className={`grid h-9 w-9 flex-none place-items-center transition-colors hover:text-ink ${contentsOpen ? 'bg-paper-deep text-ink' : 'text-ink-2'} shadow-[inset_0_0_0_1px_rgba(29,25,21,0.2)]`}
                 >
                   <SidebarIcon />
@@ -473,14 +473,14 @@ export default function RunScreen({ run, label, date, sharePath, chatInitial = [
                   <Share path={sharePath} />
                   <Download run={run} sharePath={sharePath} />
                   <button type="button" className="gr-btn-line min-[768px]:!hidden" onClick={openChat}>
-                    Chat
+                    问答
                   </button>
                 </>
               ) : (
                 running &&
                 onStop && (
                   <button type="button" className="gr-btn-line" onClick={onStop}>
-                    Stop<span className="hidden sm:inline">&nbsp;research</span>
+                    停止<span className="hidden sm:inline">研究</span>
                   </button>
                 )
               )}
@@ -510,7 +510,7 @@ export default function RunScreen({ run, label, date, sharePath, chatInitial = [
         )}
       </div>
       {done && drawer && !wide && (
-        <Drawer title="Contents" onClose={() => setDrawer(false)}>
+        <Drawer title="目录" onClose={() => setDrawer(false)}>
           {contents}
         </Drawer>
       )}

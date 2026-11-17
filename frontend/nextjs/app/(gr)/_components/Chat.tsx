@@ -28,7 +28,7 @@ export function useChat(report: string, initial: ChatMessage[] = []) {
     if (!q || busy) return;
     const id = Date.now();
     if (mock) {
-      setMessages([...history, { id, role: 'user', content: q }, { id: id + 1, role: 'assistant', content: 'Preview response: this example does not contact the research backend.' }]);
+      setMessages([...history, { id, role: 'user', content: q }, { id: id + 1, role: 'assistant', content: '预览回复：此示例不会连接研究后端。' }]);
       return;
     }
     const settled = history.filter((m) => !m.pending && !m.error);
@@ -44,7 +44,7 @@ export function useChat(report: string, initial: ChatMessage[] = []) {
       });
       const data = (await res.json()) as { response?: { content?: string; metadata?: { tool_calls?: unknown[] } | null }; error?: string };
       const content = data.response?.content;
-      if (!res.ok || !content?.trim()) throw new Error(data.error ?? `The backend answered with ${res.status}.`);
+      if (!res.ok || !content?.trim()) throw new Error(data.error ?? `后端返回状态码 ${res.status}。`);
       patch = { content, usedWeb: Boolean(data.response?.metadata?.tool_calls?.length) };
     } catch (e) {
       patch = { content: e instanceof Error ? e.message : String(e), error: true };
@@ -66,7 +66,7 @@ export function useChat(report: string, initial: ChatMessage[] = []) {
 
 export type Chat = ReturnType<typeof useChat>;
 
-const SUGGESTED = ['What could stop the rally?', 'How much of the revenue comes from data centers?', 'What would change this conclusion?'];
+const SUGGESTED = ['哪些因素可能改变当前结论？', '主要证据来自哪些来源？', '还有哪些值得继续研究的问题？'];
 
 function Thinking() {
   const [s, setS] = useState(0);
@@ -76,7 +76,7 @@ function Thinking() {
   }, []);
   return (
     <p className="font-code text-[11px] uppercase tracking-[0.12em] text-ink-3">
-      Reading the report{s > 2 ? ` · ${s}s` : ''}
+      正在阅读综述{s > 2 ? ` · ${s} 秒` : ''}
       <span className="gr-caret" aria-hidden="true" />
     </p>
   );
@@ -90,9 +90,9 @@ function Answer({ message, run, chat }: { message: ChatMessage; run: RunState; c
   if (message.error)
     return (
       <div role="alert">
-        <p className="text-[14px] leading-snug text-rubric">Could not get an answer. {message.content}</p>
+        <p className="text-[14px] leading-snug text-rubric">无法获得回答。{message.content}</p>
         <button type="button" onClick={() => chat.retry(message.id)} className="mt-2 text-[13px] font-medium underline decoration-rule underline-offset-4 hover:decoration-rubric">
-          Try again
+          重试
         </button>
       </div>
     );
@@ -103,7 +103,7 @@ function Answer({ message, run, chat }: { message: ChatMessage; run: RunState; c
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 font-code text-[10.5px] uppercase tracking-[0.1em] text-ink-3">
         <span>
           {message.seconds !== undefined && `${Math.max(1, Math.round(message.seconds))}s`}
-          {message.usedWeb && ' · searched the web'}
+          {message.usedWeb && ' · 已检索网络'}
         </span>
         <button
           type="button"
@@ -111,7 +111,7 @@ function Answer({ message, run, chat }: { message: ChatMessage; run: RunState; c
           onClick={() => chat.togglePin(message.id)}
           className={`transition-colors hover:text-ink ${message.pinned ? 'text-rubric' : ''}`}
         >
-          {message.pinned ? 'In the report' : 'Add to report'}
+          {message.pinned ? '已加入综述' : '加入综述'}
         </button>
         <button
           type="button"
@@ -121,7 +121,7 @@ function Answer({ message, run, chat }: { message: ChatMessage; run: RunState; c
           }}
           className="transition-colors hover:text-ink"
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? '已复制' : '复制'}
         </button>
       </div>
     </div>
@@ -145,7 +145,7 @@ export function ChatThread({ run, chat }: { run: RunState; chat: Chat }) {
   if (!ready)
     return (
       <p className="py-4 text-[13.5px] leading-snug text-ink-3">
-        Chat opens when the report is written. Ask about anything in it, and answers cite the same sources.
+        综述完成后可开始问答，回答会引用相同来源。
       </p>
     );
 
@@ -153,7 +153,7 @@ export function ChatThread({ run, chat }: { run: RunState; chat: Chat }) {
     <div className="py-4" aria-live="polite">
       {chat.messages.length === 0 ? (
         <>
-          <p className="text-[13.5px] leading-snug text-ink-2">Ask about this report. Answers cite its sources, and you can add the good ones to the report.</p>
+          <p className="text-[13.5px] leading-snug text-ink-2">可以围绕这篇综述提问，回答会引用来源，并可加入综述。</p>
           <ul className="mt-4 border-t border-rule-soft">
             {SUGGESTED.map((q) => (
               <li key={q} className="border-b border-rule-soft">
@@ -205,7 +205,7 @@ export function ChatComposer({ run, chat }: { run: RunState; chat: Chat }) {
       className="border-t border-ink pt-3"
     >
       <label className="block">
-        <span className="sr-only">Ask about this report</span>
+        <span className="sr-only">围绕这篇综述提问</span>
         <textarea
           rows={2}
           value={draft}
@@ -217,14 +217,14 @@ export function ChatComposer({ run, chat }: { run: RunState; chat: Chat }) {
               send();
             }
           }}
-          placeholder={ready ? 'Ask about this report' : 'Available when the report is done'}
+          placeholder={ready ? '围绕这篇综述提问' : '综述完成后可用'}
           className="gr-input w-full resize-none bg-paper-hi px-3 py-2.5 font-display text-[15px] leading-snug outline-none shadow-[inset_0_0_0_1px_rgba(29,25,21,0.26)] focus:shadow-[inset_0_0_0_1px_#1A1612] disabled:opacity-50"
         />
       </label>
       <div className="mt-2 flex items-center justify-between">
-        <span className="font-code text-[10.5px] text-ink-3">Enter to send</span>
+        <span className="font-code text-[10.5px] text-ink-3">按 Enter 发送</span>
         <button type="submit" className="gr-btn h-8 px-3.5 text-[13px]" disabled={!ready || !draft.trim() || chat.busy}>
-          Ask
+          提问
         </button>
       </div>
     </form>

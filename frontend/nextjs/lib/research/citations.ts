@@ -44,7 +44,7 @@ export function numberCitations(markdown: string, numberFor: (url: string) => nu
     const marks = Array.from(group.matchAll(LINK)).map(([, label, url]) => {
       const n = numberFor(url);
       const safeLabel = label.replace(/"/g, '&quot;');
-      return `<a class="cite" href="${url}" data-cite="${n ?? ''}" data-label="${safeLabel}" aria-label="Source ${n ?? ''}: ${safeLabel}">${n ?? '•'}</a>`;
+      return `<a class="cite" href="${url}" data-cite="${n ?? ''}" data-label="${safeLabel}" aria-label="来源 ${n ?? ''}：${safeLabel}">${n ?? '•'}</a>`;
     });
     return `<sup class="cites">${marks.join('')}</sup>`;
   });

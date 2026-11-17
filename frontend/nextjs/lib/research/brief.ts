@@ -47,13 +47,13 @@ export const TONE_VALUES = [
 export const MCP_STRATEGY_VALUES = ['fast', 'deep'];
 
 const REPORT_LABELS: Record<string, string> = {
-  research_report: 'Summary',
-  detailed_report: 'Detailed',
-  deep: 'Deep',
-  multi_agents: 'Multi agent',
+  research_report: '简要综述',
+  detailed_report: '详细综述',
+  deep: '深度研究综述',
+  multi_agents: '多智能体综述',
 };
 
-export const reportLabel = (reportType?: string) => (reportType && REPORT_LABELS[reportType]) || 'Summary';
+export const reportLabel = (reportType?: string) => (reportType && REPORT_LABELS[reportType]) || '简要综述';
 
 const oneOf = (value: unknown, allowed: string[], fallback: string) => (typeof value === 'string' && allowed.includes(value) ? value : fallback);
 

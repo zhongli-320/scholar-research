@@ -19,19 +19,19 @@ export const MCP_PRESETS: McpPreset[] = [
   {
     id: 'github',
     label: 'GitHub',
-    hint: 'Repositories, issues and code',
+    hint: '仓库、议题和代码',
     server: { name: 'github', command: 'npx', args: ['-y', '@modelcontextprotocol/server-github'], env: { GITHUB_PERSONAL_ACCESS_TOKEN: 'your_github_token_here' } },
   },
   {
     id: 'tavily',
-    label: 'Tavily search',
-    hint: 'Web search through Tavily',
+    label: 'Tavily 搜索',
+    hint: '通过 Tavily 检索网络',
     server: { name: 'tavily', command: 'npx', args: ['-y', 'tavily-mcp@0.1.2'], env: { TAVILY_API_KEY: 'your_tavily_api_key_here' } },
   },
   {
     id: 'filesystem',
-    label: 'Local files',
-    hint: 'A folder on the backend machine',
+    label: '本地文件',
+    hint: '后端计算机上的文件夹',
     server: { name: 'filesystem', command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/path/to/allowed/directory'], env: {} },
   },
 ];
@@ -44,21 +44,21 @@ export type McpCheck =
 const isEmpty = (text: string) => !text.trim() || text.trim() === '[]';
 
 export function checkMcp(text: string): McpCheck {
-  if (isEmpty(text)) return { state: 'empty', servers: [], message: 'No servers yet. Add a preset or paste a JSON list.' };
+  if (isEmpty(text)) return { state: 'empty', servers: [], message: '尚未配置服务，请添加预设或粘贴 JSON 列表。' };
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch (e) {
-    return { state: 'invalid', servers: [], message: `Not valid JSON. ${(e as Error).message}` };
+    return { state: 'invalid', servers: [], message: `JSON 格式无效：${(e as Error).message}` };
   }
-  if (!Array.isArray(parsed)) return { state: 'invalid', servers: [], message: 'The config must be a list of servers, in [ ].' };
+  if (!Array.isArray(parsed)) return { state: 'invalid', servers: [], message: '配置必须是放在 [ ] 中的服务列表。' };
   const problems = parsed.flatMap((server: Record<string, unknown> | null, i) => [
-    ...(server?.name ? [] : [`server ${i + 1} has no name`]),
-    ...(server?.command || server?.connection_url ? [] : [`server ${i + 1} needs a command or a connection_url`]),
+    ...(server?.name ? [] : [`第 ${i + 1} 个服务缺少 name`]),
+    ...(server?.command || server?.connection_url ? [] : [`第 ${i + 1} 个服务需要 command 或 connection_url`]),
   ]);
   if (problems.length) return { state: 'invalid', servers: [], message: `${problems.join(', ')}.`.replace(/^./, (c) => c.toUpperCase()) };
   const servers = parsed as McpServer[];
-  return { state: 'ready', servers, message: `${servers.length} server${servers.length === 1 ? '' : 's'} ready.` };
+  return { state: 'ready', servers, message: `${servers.length} 个服务已就绪。` };
 }
 
 export const mcpServers = (text: string): McpServer[] => checkMcp(text).servers;

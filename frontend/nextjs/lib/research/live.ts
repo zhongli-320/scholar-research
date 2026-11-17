@@ -149,8 +149,8 @@ function connect(id: string) {
       push(id, {
         type: 'error',
         output: opened
-          ? 'The connection to the backend closed before the report was finished.'
-          : `Could not reach the backend at ${getHost()}. Start it with python main.py and try again.`,
+          ? '综述完成前，与后端的连接已关闭。'
+          : `无法连接位于 ${getHost()} 的后端。请运行 python main.py 启动后端，然后重试。`,
         t: secondsIn(current),
       });
     }
@@ -187,7 +187,7 @@ export function sendFeedback(id: string, notes: string | null) {
   push(id, {
     type: 'logs',
     content: 'human_feedback_sent',
-    output: notes ? `Sent your notes to the editor: ${notes}` : 'Starting with this plan',
+    output: notes ? `已将你的意见发送给编辑：${notes}` : '按此大纲开始研究',
     t: secondsIn(run),
   });
 }

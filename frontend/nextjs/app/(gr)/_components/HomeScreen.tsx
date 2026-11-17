@@ -14,9 +14,9 @@ import { Arrow, Connection } from './ui';
 import { useReports } from './useReports';
 
 const suggestions = [
-  'Why is Nvidia stock going up?',
-  'How close are solid state batteries to mass production?',
-  'What does the EU AI Act require from a small startup?',
+  '英伟达股价上涨的主要原因是什么？',
+  '固态电池距离规模化生产还有多远？',
+  '欧盟人工智能法案对小型初创企业有哪些要求？',
 ];
 
 // shortcut: Retain draft files during client-side navigation, use IndexedDB if reload recovery is needed.
@@ -63,7 +63,7 @@ export default function HomeScreen({
     setFiles((current) => [...current, ...incoming.filter((f) => !current.some((c) => c.name === f.name))]);
     if (brief.report_source === 'web') {
       setBrief({ ...brief, report_source: 'hybrid' });
-      setNote('Now reading the web and your documents.');
+      setNote('现在将同时读取网络和你的文档。');
     }
   };
 
@@ -86,7 +86,7 @@ export default function HomeScreen({
     <>
       <main className="mx-auto w-full max-w-[860px] px-5 pb-6 pt-[9vh] sm:px-8 sm:pt-[12vh]">
         <h1 className="font-display text-[clamp(2.4rem,4.6vw,4.2rem)] font-semibold leading-[1.04] tracking-[-0.03em]">
-          What should we research?
+          想研究什么？
         </h1>
 
         <form
@@ -112,7 +112,7 @@ export default function HomeScreen({
             }`}
           >
             <label htmlFor="question" className="sr-only">
-              Research question
+              研究问题
             </label>
             <textarea
               id="question"
@@ -125,11 +125,11 @@ export default function HomeScreen({
                   void start();
                 }
               }}
-              placeholder={dragging ? 'Drop files to add them' : 'Ask a question, name a topic, or paste a link'}
+              placeholder={dragging ? '松开以添加文件' : '输入问题、主题或链接'}
               className="gr-input w-full resize-none bg-transparent font-display text-[21px] leading-snug outline-none sm:text-[23px]"
             />
             {files.length > 0 && (
-              <ul className="mb-1 mt-2 flex flex-wrap gap-1.5" aria-label="Files to research">
+              <ul className="mb-1 mt-2 flex flex-wrap gap-1.5" aria-label="研究文件">
                 {files.map((f) => (
                   <li key={f.name} className="inline-flex h-8 max-w-full items-center gap-2 bg-paper pl-3 pr-1 shadow-[inset_0_0_0_1px_rgba(29,25,21,0.14)]">
                     <span className="truncate text-[13px] font-medium">{f.name}</span>
@@ -137,7 +137,7 @@ export default function HomeScreen({
                     <button
                       type="button"
                       onClick={() => setFiles(files.filter((x) => x !== f))}
-                      aria-label={`Remove ${f.name}`}
+                      aria-label={`移除 ${f.name}`}
                       className="grid h-6 w-6 place-items-center text-ink-3 hover:text-rubric"
                     >
                       ×
@@ -148,7 +148,7 @@ export default function HomeScreen({
             )}
             <div className="mt-3 flex items-center justify-between gap-4">
               <button type="button" className="gr-btn-line" onClick={() => picker.current?.click()}>
-                + Add files
+                + 添加文件
               </button>
               <input
                 ref={picker}
@@ -168,7 +168,7 @@ export default function HomeScreen({
                   <span className="font-body">⌘</span> Enter
                 </kbd>
                 <button type="submit" className="gr-btn" disabled={!canStart}>
-                  {starting ? (files.length ? 'Uploading' : 'Starting') : 'Research'} <Arrow />
+                  {starting ? (files.length ? '正在上传' : '正在启动') : '开始写综述'} <Arrow />
                 </button>
               </div>
             </div>
@@ -180,9 +180,9 @@ export default function HomeScreen({
           )}
           {offline && (
             <p role="alert" className="mt-3 text-[14px] leading-snug text-rubric">
-              Cannot reach the backend at {backend.host || 'localhost:8000'}. Start it with <code className="font-code text-[12.5px]">python main.py</code>, or{' '}
+              无法连接后端 {backend.host || 'localhost:8000'}。请运行 <code className="font-code text-[12.5px]">python main.py</code> 启动，或{' '}
               <Link href={mock ? '/mocks/settings?tab=gpt-researcher&section=backend' : '/settings?tab=gpt-researcher&section=backend'} className="font-medium underline underline-offset-4">
-                change the address in Settings
+                在设置中修改地址
               </Link>
               .
             </p>
@@ -197,7 +197,7 @@ export default function HomeScreen({
 
         <section className="mt-16" aria-labelledby="try-h">
           <h2 id="try-h" className="gr-meta border-b border-rule pb-3">
-            Try
+            试一试
           </h2>
           <ul>
             {suggestions.map((s) => (
@@ -222,10 +222,10 @@ export default function HomeScreen({
         <section className="mt-16" aria-labelledby="recent-h">
           <div className="flex items-baseline justify-between border-b border-ink pb-3">
             <h2 id="recent-h" className="gr-meta">
-              Recent reports
+              最近综述
             </h2>
             <Link href={links.archive} className="inline-flex items-center gap-2 text-[13.5px] font-medium hover:text-rubric">
-              Archive <Arrow />
+              综述历史 <Arrow />
             </Link>
           </div>
           <ul>
@@ -236,7 +236,7 @@ export default function HomeScreen({
                   <span className="font-display text-[17.5px] font-semibold leading-snug">{r.title}</span>
                   <span className="col-start-2 inline-flex items-center gap-2.5 font-code text-[11px] tabular-nums text-ink-3 sm:col-start-auto sm:self-center">
                     <FaviconStack domains={r.domains} max={3} />
-                    {r.type} · {r.words.toLocaleString('en-US')} words
+                    {r.type} · {r.words.toLocaleString('zh-CN')} 字
                   </span>
                 </Link>
               </li>
@@ -246,7 +246,7 @@ export default function HomeScreen({
         )}
 
         <footer className="mt-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-rule-soft pt-4">
-          <p className="text-[12.5px] text-ink-3">GPT Researcher can make mistakes. Check the sources before you rely on a report.</p>
+          <p className="text-[12.5px] text-ink-3">Scholar Research 可能出错，请在采用综述内容前核对来源。</p>
           <Connection />
         </footer>
       </main>

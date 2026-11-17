@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { listHistory } from '@/lib/paperseek/client';
 import { deleteSearch, renameSearch } from '@/lib/paperseek/history';
+import { runStatusLabel } from '@/lib/paperseek/status';
 import type { PaperSeekHistoryItem } from '@/lib/paperseek/types';
 
 export default function SearchHistoryScreen() {
@@ -56,7 +57,7 @@ export default function SearchHistoryScreen() {
     {loading ? <p className="mt-6">正在加载…</p> : items.length === 0 ? <p className="mt-6 text-ink-3">暂无检索记录。</p> : <ul className="mt-6">
       {items.map((item) => <li key={item.id} className="border-b border-rule-soft py-4">
         <Link href={`/literature/${encodeURIComponent(item.id)}`} className="font-display text-lg font-semibold hover:text-rubric">{item.display_title || item.question}</Link>
-        <p className="mt-2 text-sm text-ink-3">{item.status} · {item.result_count} 条结果 · {item.source}</p>
+        <p className="mt-2 text-sm text-ink-3">{runStatusLabel(item.status)} · {item.result_count} 条结果 · {item.source}</p>
         {editId === item.id ? <form className="mt-3 flex gap-3" onSubmit={(event) => { event.preventDefault(); if (title.trim()) void mutate(() => renameSearch(item.id, title)); }}><label className="sr-only" htmlFor="history-title">新标题</label><input id="history-title" className="border border-rule bg-paper-hi p-2" maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} /><button disabled={busy || !title.trim()} type="submit">保存</button><button type="button" onClick={() => setEditId(null)}>取消</button></form> : <div className="mt-3 flex gap-4 text-sm"><button disabled={busy} onClick={() => { setEditId(item.id); setTitle(item.display_title || item.question); setConfirmId(null); }}>重命名</button>{confirmId === item.id ? <><span role="alert">确定删除这条检索？</span><button autoFocus aria-label={`确认删除：${item.display_title || item.question}`} disabled={busy} onClick={() => void mutate(() => deleteSearch(item.id))}>确认删除</button><button disabled={busy} onClick={() => { restoreDeleteFocus.current = item.id; setConfirmId(null); }}>取消</button></> : <button ref={(node) => { if (node && restoreDeleteFocus.current === item.id) { restoreDeleteFocus.current = null; node.focus(); } }} disabled={busy} onClick={() => setConfirmId(item.id)}>删除</button>}</div>}
       </li>)}
     </ul>}

@@ -25,7 +25,7 @@ it.each(['', '?backend=offline'])('keeps mock navigation and settings isolated w
   expect(navs).toHaveLength(2);
   for (const nav of navs) expect([...nav.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(expected);
   expect(router.push).toHaveBeenCalledWith('/mocks/settings?tab=gpt-researcher&section=mcp');
-  if (query) expect(element.textContent).toContain('Cannot reach the backend');
+  if (query) expect(element.textContent).toContain('无法连接后端');
   for (const link of element.querySelectorAll('a[href*="settings"]')) expect(link.getAttribute('href')).toMatch(/^\/mocks\/settings/);
   expect(fetcher).not.toHaveBeenCalled();
   await act(async () => root.unmount()); vi.unstubAllGlobals();
