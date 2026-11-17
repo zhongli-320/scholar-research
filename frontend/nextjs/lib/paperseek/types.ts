@@ -34,6 +34,11 @@ export interface PaperSeekResult {
   uid: string; rank: number; title: string; authors: string[]; year: number | null; venue: string;
   doi: string; url: string; abstract: string; relevance_score: number | null; relevance_reason: string;
   citation_count: number;
+  journal_metrics?: {
+    cas?: { tier?: number | null; top?: boolean };
+    jcr?: { quartile?: string; impact_factor?: number | null };
+    ccf?: { rank?: string };
+  };
 }
 export interface PaperSeekFilters {
   cursor?: string; page_size?: number; query?: string; min_score?: number; metadata?: string;

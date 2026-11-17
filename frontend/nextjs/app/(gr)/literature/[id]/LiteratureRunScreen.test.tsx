@@ -15,9 +15,9 @@ vi.mock('@/lib/paperseek/events', async (importOriginal) => ({ ...await importOr
 vi.stubGlobal('React', React);
 vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 afterEach(() => vi.clearAllMocks());
-it('loads the existing run before subscribing and refreshes when it completes with warnings', async () => {
+it('loads the existing run before subscribing and hides non-fatal warnings after results complete', async () => {
   let resolve!: (run: never) => void;
-  vi.mocked(getRun).mockReturnValueOnce(new Promise((done) => { resolve = done; })).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'completed_with_warnings', result_count: 3 });
+  vi.mocked(getRun).mockReturnValueOnce(new Promise((done) => { resolve = done; })).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'completed_with_warnings', result_count: 3, warnings: ['source_rate_limited'] });
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => { root.render(<LiteratureRunScreen id="a" />); });
   expect(getRun).toHaveBeenCalledWith('a'); expect(openRunEvents).not.toHaveBeenCalled();
@@ -26,11 +26,12 @@ it('loads the existing run before subscribing and refreshes when it completes wi
   await act(async () => { handlers.onEvent({ run_id: 'a', sequence: 3, event_type: 'run.completed_with_warnings', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: {} }); });
   expect(getRun).toHaveBeenCalledTimes(2);
   expect(container.textContent).toContain('completed_with_warnings');
+  expect(container.textContent).not.toContain('source_rate_limited');
   await act(async () => root.unmount());
 });
 
 it('applies terminal failure before a failed refresh and offers same-run recovery', async () => {
-  vi.mocked(getRun).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'running', result_count: 0 }).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'failed', error_code: 'TIMEOUT', result_count: 0 });
+  vi.mocked(getRun).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'running', result_count: 0 }).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'failed', error_code: 'TIMEOUT', result_count: 0, warnings: ['provider_interrupted'] });
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => { root.render(<LiteratureRunScreen id="a" />); });
   const handlers = vi.mocked(openRunEvents).mock.calls[0][1];
@@ -40,6 +41,7 @@ it('applies terminal failure before a failed refresh and offers same-run recover
   const retry = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!;
   await act(async () => retry.click());
   expect(vi.mocked(getRun).mock.calls.map(([id]) => id)).toEqual(['a', 'a', 'a']);
+  expect(container.textContent).toContain('provider_interrupted');
   await act(async () => root.unmount());
 });
 

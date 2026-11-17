@@ -65,7 +65,7 @@ function RunDetails({ id }: { id: string }) {
     {run && <>
       <h1 className="mt-5 font-display text-3xl font-semibold">{run.display_title || run.question}</h1>
       <p className="mt-3 text-sm text-ink-3">{run.source} · 状态：{status} · 阶段：{progress.stage || run.current_step || '—'} · 结果：{run.result_count}</p>
-      {[...new Set([...(run.warnings ?? []), ...progress.warnings])].map((warning) => <p key={warning} className="mt-2 text-sm text-rubric">警告：{warning}</p>)}
+      {['failed', 'cancelled'].includes(status) && [...new Set([...(run.warnings ?? []), ...progress.warnings])].map((warning) => <p key={warning} className="mt-2 text-sm text-rubric">警告：{warning}</p>)}
       {(run.error_code || progress.errorCode) && <p role="alert" className="mt-2 text-rubric">错误代码：{run.error_code || progress.errorCode}</p>}
       {!terminal(status) && <button className="gr-btn mt-5" type="button" onClick={() => void updateRun('cancel')} disabled={cancelling || status === 'cancelling'}>{cancelling || status === 'cancelling' ? '正在取消' : '取消此检索'}</button>}
       {progress.events.length > 0 && <details className="mt-5 text-sm"><summary className="cursor-pointer">检索进度（{progress.events.length}）</summary><ol className="mt-2 space-y-1">{progress.events.map((event) => <li key={event.sequence}>{event.sequence}. {event.stage} · {event.event_type} {Object.entries(event.payload ?? {}).filter(([key, value]) => /count|completed_batches|batch_count/.test(key) && typeof value === 'number').map(([key, value]) => `${key}: ${value}`).join(' · ')}</li>)}</ol></details>}

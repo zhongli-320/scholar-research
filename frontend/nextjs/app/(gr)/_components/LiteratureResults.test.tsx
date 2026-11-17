@@ -45,3 +45,27 @@ it('keeps the displayed page and cursor stack if the next page fails, then retri
   expect(vi.mocked(getResults).mock.calls[3][1]).toMatchObject({ cursor: undefined });
   await act(async () => root.unmount());
 });
+
+it('shows available journal rankings per result without empty labels', async () => {
+  vi.clearAllMocks();
+  const result = { rank: 1, uid: 'one', title: 'Paper', authors: ['Author'], year: 2025, venue: 'Journal', doi: '', url: '', abstract: '', relevance_score: 9, relevance_reason: '', citation_count: 1 };
+  vi.mocked(getResults).mockResolvedValue({
+    ...page(null),
+    results: [
+      { ...result, journal_metrics: { cas: { tier: 1, top: true }, jcr: { quartile: 'Q1', impact_factor: 18.8 } } },
+      { ...result, rank: 2, uid: 'two', journal_metrics: { ccf: { rank: 'B' } } },
+      { ...result, rank: 3, uid: 'three', journal_metrics: {} },
+    ],
+  });
+  const container = document.createElement('div'); const root = createRoot(container);
+  await act(async () => root.render(<LiteratureResults id="a" />));
+  const results = Array.from(container.querySelectorAll('ol > li'));
+  expect(results[0].textContent).toContain('JCR Q1');
+  expect(results[0].textContent).toContain('IF 18.8');
+  expect(results[0].textContent).toContain('中科院 1 区');
+  expect(results[0].textContent).toContain('Top');
+  expect(results[1].textContent).toContain('CCF B');
+  expect(results[1].textContent).not.toMatch(/JCR|IF|中科院|Top/);
+  expect(results[2].textContent).not.toMatch(/JCR|IF|中科院|Top|CCF/);
+  await act(async () => root.unmount());
+});
