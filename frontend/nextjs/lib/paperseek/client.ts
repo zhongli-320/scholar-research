@@ -1,4 +1,5 @@
 import type { PaperSeekArtifact, PaperSeekCitationMap, PaperSeekFilters, PaperSeekHistoryPage, PaperSeekResultPage, PaperSeekRun, PaperSeekRunInput, PaperSeekSource } from './types';
+import { loadPaperSeekSettings } from './settings';
 
 export class PaperSeekApiError extends Error {
   constructor(public code: string, message: string, public status: number) {
@@ -27,10 +28,15 @@ export async function listHistory(params: { limit?: number; cursor?: string; que
   return read(await fetch(`/api/paperseek/history${suffix ? `?${suffix}` : ''}`));
 }
 export async function createRun(input: PaperSeekRunInput): Promise<PaperSeekRun> {
+  const { defaults } = await loadPaperSeekSettings();
   return read(await fetch('/api/paperseek/runs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      connections: { llm: defaults.search_llm, embedding: defaults.embedding, reranker: defaults.reranker, decision: defaults.decision },
+      retrieval: { mode: defaults.pre_ranking },
+    }),
   }));
 }
 
