@@ -9,6 +9,14 @@ vi.stubGlobal('React', React);
 vi.mock('next/navigation', () => ({ usePathname: () => '/' }));
 
 describe('mobile navigation', () => {
+  it('uses the local Scholar Research brand without a logo or GitHub promotion', () => {
+    const document = new JSDOM(renderToStaticMarkup(React.createElement(TopBar))).window.document as Document;
+    const brand = document.querySelector('header > a');
+    expect(brand?.textContent?.trim()).toBe('Scholar Research');
+    expect(brand?.querySelector('.gr-mark')).toBeNull();
+    expect(document.querySelector('a[href*="github.com"]')).toBeNull();
+  });
+
   it('groups history links inside a closed history disclosure', () => {
     const document = new JSDOM(renderToStaticMarkup(React.createElement(TopBar))).window.document as Document;
     const mobile = document.querySelector('details.md\\:hidden');

@@ -41,7 +41,7 @@ it('shows keyboard links for both settings systems while disabling mutation cont
   const element = document.createElement('div'); document.body.appendChild(element); const root = createRoot(element);
   await act(async () => root.render(<FixtureBoundary><Settings searchParams={{}} /></FixtureBoundary>));
   const tabs = [...element.querySelectorAll('nav[aria-label="设置系统"] a')];
-  expect(tabs.map(tab => tab.textContent)).toEqual(['PaperSeek', 'GPT Researcher']);
+  expect(tabs.map(tab => tab.textContent)).toEqual(['PaperSeek', 'Scholar Research']);
   expect(tabs[1].getAttribute('href')).toBe('/mocks/settings?tab=gpt-researcher');
   expect(tabs.every(tab => tab instanceof HTMLAnchorElement && tab.hasAttribute('href'))).toBe(true);
   for (const tab of tabs) { (tab as HTMLAnchorElement).focus(); expect(document.activeElement).toBe(tab); }

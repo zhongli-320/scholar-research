@@ -10,7 +10,7 @@ export default function SettingsPage({ searchParams }: { searchParams: { tab?: s
     <h1 className="font-display text-3xl font-semibold">设置</h1>
     <nav aria-label="设置系统" className="mt-6 flex gap-6 border-b border-rule-soft">
       <Link href="/settings?tab=paperseek" aria-current={tab === 'paperseek' ? 'page' : undefined} className="border-b-2 border-transparent py-3 font-medium aria-[current=page]:border-rubric">PaperSeek</Link>
-      <Link href="/settings?tab=gpt-researcher" aria-current={tab === 'gpt-researcher' ? 'page' : undefined} className="border-b-2 border-transparent py-3 font-medium aria-[current=page]:border-rubric">GPT Researcher</Link>
+      <Link href="/settings?tab=gpt-researcher" aria-current={tab === 'gpt-researcher' ? 'page' : undefined} className="border-b-2 border-transparent py-3 font-medium aria-[current=page]:border-rubric">Scholar Research</Link>
     </nav>
     <div className="mt-6 bg-paper-hi">{tab === 'paperseek' ? <PaperSeekSettings /> : <ResearcherSettings tab={section} />}</div>
   </main>;

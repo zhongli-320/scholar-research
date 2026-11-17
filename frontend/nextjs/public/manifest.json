@@ -1,6 +1,6 @@
 {
-  "name": "GPT Researcher",
-  "short_name": "GPT Research",
+  "name": "Scholar Research",
+  "short_name": "Scholar Research",
   "description": "AI research assistant that helps you find information and answer questions.",
   "start_url": "/",
   "display": "standalone",
@@ -55,4 +55,4 @@
   "prefer_related_applications": false,
   "dir": "ltr",
   "categories": ["productivity", "research", "education", "utilities"]
-} 
+}

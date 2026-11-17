@@ -103,7 +103,7 @@ function useTabTitle(run: RunState) {
 
   const title = run.report.match(/^#\s+(.+)$/m)?.[1]?.trim();
   useEffect(() => {
-    document.title = run.status === 'done' && title ? `${title} · GPT Researcher` : `${statusWord[run.status]} · ${run.query}`;
+    document.title = run.status === 'done' && title ? `${title} · Scholar Research` : `${statusWord[run.status]} · ${run.query}`;
   }, [run.status, run.query, title]);
 }
 

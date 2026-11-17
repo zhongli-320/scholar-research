@@ -8,7 +8,7 @@ const body = Instrument_Sans({ subsets: ['latin'], variable: '--font-body', disp
 const code = JetBrains_Mono({ subsets: ['latin'], variable: '--font-code', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'GPT Researcher',
+  title: 'Scholar Research',
 };
 
 export const viewport: Viewport = {

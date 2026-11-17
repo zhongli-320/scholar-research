@@ -6,7 +6,7 @@ import FixtureBoundary from './_components/FixtureBoundary';
 import { archive } from './_data/archive';
 
 export const metadata: Metadata = {
-  title: 'GPT Researcher - design mocks',
+  title: 'Scholar Research - design mocks',
   robots: { index: false, follow: false },
 };
 
