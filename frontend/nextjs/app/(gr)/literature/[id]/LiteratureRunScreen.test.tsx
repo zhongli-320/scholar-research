@@ -4,11 +4,10 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 import LiteratureRunScreen from './LiteratureRunScreen';
-import { cancelRun, getRun, getResults, getCitationMap, listArtifacts } from '@/lib/paperseek/client';
+import { cancelRun, getRun, getResults } from '@/lib/paperseek/client';
 import { openRunEvents } from '@/lib/paperseek/events';
 vi.mock('@/lib/paperseek/client', () => ({
   getRun: vi.fn(), cancelRun: vi.fn(), exportRun: vi.fn().mockReturnValue('/export'), exportSelected: vi.fn(), getResults: vi.fn().mockResolvedValue({ results: [], total_count: 0 }),
-  getCitationMap: vi.fn().mockResolvedValue({ nodes: [], edges: [] }), listArtifacts: vi.fn().mockResolvedValue([]),
   PaperSeekApiError: class extends Error {},
 }));
 vi.mock('@/lib/paperseek/events', async (importOriginal) => ({ ...await importOriginal(), openRunEvents: vi.fn().mockReturnValue(() => {}) }));
@@ -74,40 +73,52 @@ it('loads results only after recovering a completed run when state and results a
     if (!online) throw new Error('offline');
     return { results: [], next_cursor: null, total_count: 1, matched_count: 1, scored_count: 1, high_score_count: 0, max_score: 3 };
   });
-  vi.mocked(getCitationMap).mockImplementation(async () => { if (!online) throw new Error('offline'); return { nodes: [], edges: [] }; });
-  vi.mocked(listArtifacts).mockImplementation(async () => { if (!online) throw new Error('offline'); return []; });
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => root.render(<LiteratureRunScreen id="a" />));
   await act(async () => vi.mocked(openRunEvents).mock.calls[0][1].onEvent({ run_id: 'a', sequence: 4, event_type: 'run.completed', stage: 'lifecycle', occurred_at: '', schema_version: 1, payload: {} }));
   expect(container.textContent).toContain('状态：已完成');
   expect(container.textContent).not.toContain('取消此检索');
-  expect(getResults).not.toHaveBeenCalled(); expect(getCitationMap).not.toHaveBeenCalled(); expect(listArtifacts).not.toHaveBeenCalled();
+  expect(getResults).not.toHaveBeenCalled();
   online = true;
   const retry = Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes('重试'))!;
   await act(async () => retry.click());
   expect(vi.mocked(getRun).mock.calls.map(([id]) => id)).toEqual(['a', 'a', 'a']);
   expect(getResults).toHaveBeenCalledWith('a', expect.anything());
-  expect(getCitationMap).toHaveBeenCalledWith('a'); expect(listArtifacts).toHaveBeenCalledWith('a');
   expect(container.textContent).toContain('共 1 条');
   await act(async () => root.unmount());
 });
-it('retries failed results, citations, and artifacts independently after a completed state GET', async () => {
+it('retries failed results without rendering citation or artifact sections', async () => {
   vi.mocked(getRun).mockResolvedValue({ id: 'a', question: 'q', display_title: '', source: 'openalex', status: 'completed', result_count: 2 });
   vi.mocked(getResults).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ results: [], next_cursor: null, total_count: 2, matched_count: 2, scored_count: 2, high_score_count: 1, max_score: 5 });
-  vi.mocked(getCitationMap).mockRejectedValueOnce(new Error('offline')).mockResolvedValue({ nodes: [], edges: [] });
-  vi.mocked(listArtifacts).mockRejectedValueOnce(new Error('offline')).mockResolvedValue([{ id: 'file', filename: 'file.csv', kind: 'export_csv' }]);
   const container = document.createElement('div'); const root = createRoot(container);
   await act(async () => root.render(<LiteratureRunScreen id="a" />));
   const retry = (text: string) => Array.from(container.querySelectorAll('button')).find((button) => button.textContent?.includes(text))!;
-  expect(retry('重试结果')).toBeTruthy(); expect(retry('重试引用图')).toBeTruthy(); expect(retry('重试产物')).toBeTruthy();
+  expect(retry('重试结果')).toBeTruthy();
   await act(async () => retry('重试结果').click());
   expect(container.textContent).toContain('共 2 条'); expect(retry('重试结果')).toBeFalsy();
-  expect(retry('重试引用图')).toBeTruthy(); expect(retry('重试产物')).toBeTruthy();
-  await act(async () => retry('重试引用图').click());
-  expect(container.textContent).toContain('0 个节点，0 条引用关系');
-  expect(retry('重试引用图')).toBeFalsy(); expect(retry('重试产物')).toBeTruthy();
-  await act(async () => retry('重试产物').click());
-  expect(container.textContent).toContain('file.csv'); expect(retry('重试引用图')).toBeFalsy(); expect(retry('重试产物')).toBeFalsy();
+  expect(container.textContent).not.toContain('引用图与产物');
+  await act(async () => root.unmount());
+});
+
+it('shows collapsible search paths, iteration details, and the actual ranking count', async () => {
+  vi.mocked(getRun).mockResolvedValue({ id: 'a', question: '社交机器人', display_title: '', source: 'openalex', status: 'running', result_count: 256 });
+  const container = document.createElement('div'); const root = createRoot(container);
+  await act(async () => root.render(<LiteratureRunScreen id="a" />));
+  const onEvent = vi.mocked(openRunEvents).mock.calls[0][1].onEvent;
+  const event = (sequence: number, event_type: string, payload: Record<string, unknown>) => ({ run_id: 'a', sequence, event_type, stage: 'query', occurred_at: '', schema_version: 1, payload });
+  await act(async () => {
+    onEvent(event(1, 'query.planned', { intent: '研究社交机器人', current_query: 'social robots', query_view_count: 1, query_views: [{ view_id: 'core', purpose: '核心主题', concept_groups: [{ label: '主题', terms: ['social robot', '社交机器人'] }] }] }));
+    onEvent(event(2, 'query.portfolio_recorded', { view_id: 'core', query: 'title.search:"social robot"', hit_count: 420, added_unique: 300 }));
+    onEvent(event(3, 'query.progress', { iteration: 1, query: 'social robot', total: 420, hit_count: 300, decision: 'keep' }));
+    onEvent(event(4, 'retrieval.completed', { candidate_count: 756 }));
+    onEvent(event(5, 'ranking.completed', { candidate_count: 256, scored_count: 256 }));
+  });
+  const panels = container.querySelectorAll('[aria-label="检索过程"] > details');
+  expect(panels).toHaveLength(4);
+  expect(container.textContent).toContain('title.search:"social robot"');
+  expect(container.textContent).toContain('第 1 轮');
+  expect(container.textContent).toContain('进入排序256');
+  expect(container.textContent).toContain('BM25');
   await act(async () => root.unmount());
 });
 

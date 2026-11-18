@@ -6,7 +6,7 @@ import { expect, it, vi } from 'vitest';
 import LiteratureResults from './LiteratureResults';
 import { getResults } from '@/lib/paperseek/client';
 import type { PaperSeekResultPage } from '@/lib/paperseek/types';
-vi.mock('@/lib/paperseek/client', () => ({ getResults: vi.fn(), getCitationMap: vi.fn().mockResolvedValue({ nodes: [], edges: [] }), listArtifacts: vi.fn().mockResolvedValue([]), exportRun: () => '/export', exportSelected: vi.fn(), PaperSeekApiError: class extends Error {} }));
+vi.mock('@/lib/paperseek/client', () => ({ getResults: vi.fn(), exportRun: () => '/export', exportSelected: vi.fn(), PaperSeekApiError: class extends Error {} }));
 vi.stubGlobal('React', React); vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 const page = (cursor: string | null): PaperSeekResultPage => ({ results: [], next_cursor: cursor, total_count: 2, matched_count: 2, scored_count: 2, high_score_count: 1, max_score: 10 });
 it('disables paging during requests and discards the previous filter cursor', async () => {
@@ -45,7 +45,6 @@ it('keeps the displayed page and cursor stack if the next page fails, then retri
   expect(vi.mocked(getResults).mock.calls[3][1]).toMatchObject({ cursor: undefined });
   await act(async () => root.unmount());
 });
-
 it('shows available journal rankings per result without empty labels', async () => {
   vi.clearAllMocks();
   const result = { rank: 1, uid: 'one', title: 'Paper', authors: ['Author'], year: 2025, venue: 'Journal', doi: '', url: '', abstract: '', relevance_score: 9, relevance_reason: '', citation_count: 1 };

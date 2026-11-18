@@ -390,8 +390,10 @@ class ResearchConductor:
         sub_queries = await self.plan_research(query, query_domains, search_results=initial_results)
         self.logger.info(f"Generated sub-queries: {sub_queries}")
         
-        # If this is not part of a sub researcher, add original query to research for better results
-        if self.researcher.report_type != "subtopic_report":
+        # The planning search already covers the original query and its scraped
+        # context is included below. Running it again would revisit the same
+        # URLs and produce an empty, misleading final sub-query in the UI.
+        if self.researcher.report_type != "subtopic_report" and not initial_results:
             sub_queries.append(query)
 
         if self.researcher.verbose:

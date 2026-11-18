@@ -51,3 +51,28 @@ async def test_complementary_web_context_is_joined_without_corruption(
         )
     else:
         conductor._get_context_by_web_search.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_planning_results_replace_redundant_original_subquery():
+    researcher = SimpleNamespace(
+        retrievers=[],
+        cfg=SimpleNamespace(mcp_strategy="disabled"),
+        report_type="research_report",
+        verbose=False,
+        websocket=None,
+    )
+    conductor = ResearchConductor(researcher)
+    conductor._get_initial_search_results = AsyncMock(return_value=[{"url": "https://example.com"}])
+    conductor.plan_research = AsyncMock(return_value=["planned one", "planned two", "planned three"])
+    conductor._get_context_from_initial_results = AsyncMock(return_value="original context")
+    conductor._process_sub_query = AsyncMock(side_effect=lambda query, *_: f"context for {query}")
+
+    result = await conductor._get_context_by_web_search("original question")
+
+    assert result == "original context context for planned one context for planned two context for planned three"
+    assert [call.args[0] for call in conductor._process_sub_query.await_args_list] == [
+        "planned one",
+        "planned two",
+        "planned three",
+    ]

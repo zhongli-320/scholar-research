@@ -46,23 +46,48 @@ function ProcessPanel({ title, description, summary, metrics, children, active =
   children?: React.ReactNode;
   active?: boolean;
 }) {
-  return <section className={`border bg-paper px-4 py-4 ${active ? 'border-rubric' : 'border-rule'}`}>
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-rule-soft pb-3">
-      <h2 className="font-display text-lg font-semibold">{title}</h2>
-      <p className="text-sm text-ink-3">{summary}</p>
+  const [expanded, setExpanded] = useState(active);
+  useEffect(() => { if (active) setExpanded(true); }, [active]);
+  return <details className={`border bg-paper px-4 py-4 ${active ? 'border-rubric' : 'border-rule'}`} open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+    <summary className="cursor-pointer select-none">
+      <span className="ml-1 inline-flex w-[calc(100%-1rem)] flex-wrap items-baseline justify-between gap-2 align-middle">
+        <span className="font-display text-lg font-semibold">{title}</span>
+        <span className="text-sm font-normal text-ink-3">{summary}</span>
+      </span>
+    </summary>
+    <div className="mt-3 border-t border-rule-soft pt-3">
+      <p className="text-sm leading-relaxed text-ink-2">{description}</p>
+      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden bg-rule-soft sm:grid-cols-4">
+        {metrics.map(([label, value]) => <Metric key={label} label={label} value={value} />)}
+      </div>
+      {children}
     </div>
-    <p className="mt-3 text-sm leading-relaxed text-ink-2">{description}</p>
-    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden bg-rule-soft sm:grid-cols-4">
-      {metrics.map(([label, value]) => <Metric key={label} label={label} value={value} />)}
-    </div>
-    {children}
-  </section>;
+  </details>;
 }
+
+const payloadText = (payload: Record<string, unknown>, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return '';
+};
+
+const payloadNumber = (payload: Record<string, unknown>, ...keys: string[]) => {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'number') return value;
+  }
+  return 0;
+};
 
 function SearchProcess({ run, events, currentStage }: { run: PaperSeekRun; events: PaperSeekEvent[]; currentStage: string }) {
   const planned = events.filter((event) => event.event_type === 'query.planned');
   const queryEvents = events.filter((event) => event.event_type.startsWith('query.'));
-  const recallEvents = events.filter((event) => /^(retrieve|candidate|selection|select|rank|rerank)\./.test(event.event_type));
+  const recallEvents = events.filter((event) => /^(retriev|candidate|selection|select|rank|rerank)/.test(event.event_type));
+  const retrievalEvents = events.filter((event) => /^(retriev|candidate)/.test(event.event_type));
+  const rankingEvents = events.filter((event) => /^(selection|select|rank|rerank)/.test(event.event_type));
+  const portfolioEvents = events.filter((event) => event.event_type === 'query.portfolio_recorded');
   const query = stringFrom(planned, 'current_query', 'query');
   const intent = stringFrom(planned, 'intent');
   const decision = stringFrom(queryEvents, 'decision');
@@ -70,10 +95,20 @@ function SearchProcess({ run, events, currentStage }: { run: PaperSeekRun; event
   const totalHits = numberFrom(queryEvents, 'total');
   const returned = numberFrom(queryEvents, 'hit_count', 'retrieved_count');
   const views = numberFrom(planned, 'query_view_count');
-  const candidates = numberFrom(recallEvents, 'candidate_count', 'total_candidates', 'fused_count', 'loaded_candidates');
-  const ranked = numberFrom(recallEvents, 'ranked_count', 'selected_count', 'sent_to_llm');
+  const candidates = numberFrom(retrievalEvents, 'candidate_count', 'total_candidates', 'fused_count', 'loaded_candidates');
+  const ranked = numberFrom(rankingEvents, 'llm_gate_candidate_count', 'ranked_count', 'selected_count', 'sent_to_llm', 'scored_count', 'candidate_count');
   const finalCount = run.result_count || numberFrom(events, 'result_count', 'final_count');
   const statusText = runStatusLabel(run.status);
+  const queryPaths = planned.flatMap((event) => Array.isArray(event.payload?.query_views)
+    ? event.payload.query_views.filter((view): view is Record<string, unknown> => Boolean(view) && typeof view === 'object')
+    : []);
+  const iterationMap = new Map<number, Record<string, unknown>>();
+  for (const event of queryEvents) {
+    const iteration = event.payload?.iteration;
+    if (typeof iteration !== 'number') continue;
+    iterationMap.set(iteration, { ...(iterationMap.get(iteration) ?? {}), ...event.payload });
+  }
+  const iterationRows = [...iterationMap.entries()].sort(([left], [right]) => left - right);
 
   return <div className="mt-7 space-y-3" aria-label="检索过程">
     <ProcessPanel
@@ -84,7 +119,22 @@ function SearchProcess({ run, events, currentStage }: { run: PaperSeekRun; event
       active={currentStage === 'query' && !planned.length}
     >
       {intent && <p className="mt-3 text-sm"><span className="text-ink-3">识别意图：</span>{intent}</p>}
-      {query && <pre className="mt-3 overflow-x-auto bg-paper-deep px-4 py-3 font-code text-xs leading-relaxed whitespace-pre-wrap">{query}</pre>}
+      {queryPaths.length > 0 ? <div className="mt-3 space-y-2">
+        {queryPaths.map((path, index) => {
+          const viewId = payloadText(path, 'view_id');
+          const recorded = portfolioEvents.find((event) => event.payload?.view_id === viewId)?.payload ?? {};
+          const groups = Array.isArray(path.concept_groups) ? path.concept_groups.filter((group): group is Record<string, unknown> => Boolean(group) && typeof group === 'object') : [];
+          const pathQuery = payloadText(recorded, 'query') || query;
+          return <details key={viewId || index} className="border border-rule-soft bg-paper-hi px-3 py-2 text-sm">
+            <summary className="cursor-pointer select-none font-medium">路径 {index + 1}：{payloadText(path, 'purpose') || payloadText(path, 'view_type') || '主题检索'}</summary>
+            {pathQuery && <pre className="mt-2 overflow-x-auto bg-paper-deep px-3 py-2 font-code text-xs leading-relaxed whitespace-pre-wrap">{pathQuery}</pre>}
+            {groups.map((group, groupIndex) => <p key={groupIndex} className="mt-2 text-xs text-ink-2">
+              {payloadText(group, 'label', 'field_hint') || `概念组 ${groupIndex + 1}`}：{Array.isArray(group.terms) ? group.terms.join('、') : '—'}
+            </p>)}
+            {Object.keys(recorded).length > 0 && <p className="mt-2 text-xs text-ink-3">命中 {payloadNumber(recorded, 'hit_count', 'total').toLocaleString('zh-CN')} · 新增候选 {payloadNumber(recorded, 'added_unique').toLocaleString('zh-CN')}</p>}
+          </details>;
+        })}
+      </div> : query && <pre className="mt-3 overflow-x-auto bg-paper-deep px-4 py-3 font-code text-xs leading-relaxed whitespace-pre-wrap">{query}</pre>}
     </ProcessPanel>
 
     <ProcessPanel
@@ -93,7 +143,15 @@ function SearchProcess({ run, events, currentStage }: { run: PaperSeekRun; event
       summary={queryEvents.length ? `${iterations || 1} 轮 · ${decision === 'narrow' ? '正在缩小范围' : decision === 'broaden' ? '正在扩大范围' : '正在评估检索式'}` : '等待检索'}
       metrics={[["检索轮次", iterations], ["数据源总命中", totalHits], ["本轮取回", returned], ["迭代事件", queryEvents.length]]}
       active={currentStage === 'query' && planned.length > 0}
-    />
+    >
+      {iterationRows.length > 0 && <div className="mt-3 space-y-2">
+        {iterationRows.map(([iteration, row]) => <details key={iteration} className="border border-rule-soft bg-paper-hi px-3 py-2 text-sm">
+          <summary className="cursor-pointer select-none font-medium">第 {iteration} 轮 · 命中 {payloadNumber(row, 'hit_count', 'total').toLocaleString('zh-CN')} · {payloadText(row, 'decision') === 'narrow' ? '缩小范围' : payloadText(row, 'decision') === 'broaden' ? '扩大范围' : '保留或评估'}</summary>
+          {payloadText(row, 'query') && <pre className="mt-2 overflow-x-auto bg-paper-deep px-3 py-2 font-code text-xs leading-relaxed whitespace-pre-wrap">{payloadText(row, 'query')}</pre>}
+          <p className="mt-2 text-xs text-ink-3">数据源总命中 {payloadNumber(row, 'total').toLocaleString('zh-CN')} · 本轮取回 {payloadNumber(row, 'hit_count', 'retrieved_count').toLocaleString('zh-CN')}{payloadText(row, 'reason', 'message') ? ` · ${payloadText(row, 'reason', 'message')}` : ''}</p>
+        </details>)}
+      </div>}
+    </ProcessPanel>
 
     <ProcessPanel
       title="候选召回与排序"
@@ -101,7 +159,9 @@ function SearchProcess({ run, events, currentStage }: { run: PaperSeekRun; event
       summary={recallEvents.length ? `已记录 ${recallEvents.length} 个召回与排序节点` : '等待候选文献'}
       metrics={[["候选文献", candidates], ["进入排序", ranked], ["处理节点", recallEvents.length]]}
       active={['retrieval', 'selection', 'ranking'].some((stage) => currentStage.includes(stage))}
-    />
+    >
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">相关性评分：候选池先综合多路检索名次、主题相似度、BM25 与检索词覆盖率进行预排；进入排序的文献再依据稳定检索计划，以及题名、摘要、关键词等证据按 0–10 分独立评分。引用数不直接计入主题相关性。</p>
+    </ProcessPanel>
 
     <ProcessPanel
       title="文献结果"

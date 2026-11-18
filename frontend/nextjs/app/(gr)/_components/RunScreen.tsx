@@ -27,7 +27,6 @@ function useWide() {
     () => true,
   );
 }
-
 const Chevron = ({ open }: { open: boolean }) => (
   <svg viewBox="0 0 12 12" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`}>
     <path d="M2.5 4.5 6 8l3.5-3.5" />
@@ -41,7 +40,6 @@ function Receipt({ run }: { run: RunState }) {
     ['问题数', String(run.subqueries.length)],
     ['已读页面', String(run.pagesScraped)],
     ...(run.images.length ? ([['图片', String(run.images.length)]] as [string, string][]) : []),
-    ...(run.cost ? ([['费用', `$${run.cost.toFixed(3)}`]] as [string, string][]) : []),
     ...(run.agent ? ([['智能体', run.agent]] as [string, string][]) : []),
   ];
   const timed = run.stages.flatMap((s) => (s.startedAt !== undefined && s.endedAt !== undefined && s.endedAt > s.startedAt ? [{ ...s, took: s.endedAt - s.startedAt }] : []));
