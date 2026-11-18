@@ -75,6 +75,32 @@ const fetchText = async (path: string) => {
   }
 };
 
+/** Save the best report currently available. Some backends emit the completed
+ * report without a following file-path event, so history must not depend on
+ * generated downloads being present. */
+function persist(id: string) {
+  const run = runs.get(id);
+  if (!run) return Promise.resolve(false);
+  const state = reduceRun(run.question, run.events);
+  if (!state.report.trim()) return Promise.resolve(false);
+  const report: StoredReport = {
+    id,
+    question: run.question,
+    answer: state.report,
+    orderedData: run.events,
+    chatMessages: run.chat,
+    timestamp: Date.now(),
+    brief: { report_type: run.brief.report_type, report_source: run.brief.report_source, tone: run.brief.tone, domains: run.brief.domains },
+  };
+  return saveReport(report)
+    .then(() => {
+      sessionStorage.removeItem(PENDING_KEY(id));
+      reportsStore.upsert(report);
+      return true;
+    })
+    .catch(() => false);
+}
+
 /** Multi agent runs may end without the report in the stream; the Markdown file the backend wrote has it. */
 async function finish(id: string, path: ResearchEvent & { type: 'path' }) {
   const before = runs.get(id);
@@ -87,24 +113,7 @@ async function finish(id: string, path: ResearchEvent & { type: 'path' }) {
     if (text.trim()) push(id, { type: 'report_complete', output: text, t: path.t });
   }
   push(id, path);
-  const run = runs.get(id)!;
-  const state = reduceRun(run.question, run.events);
-  const report: StoredReport = {
-    id,
-    question: run.question,
-    answer: state.report,
-    orderedData: run.events,
-    chatMessages: [],
-    timestamp: Date.now(),
-    brief: { report_type: run.brief.report_type, report_source: run.brief.report_source, tone: run.brief.tone, domains: run.brief.domains },
-  };
-  const saved = saveReport(report)
-    .then(() => {
-      sessionStorage.removeItem(PENDING_KEY(id));
-      reportsStore.upsert(report);
-      return true;
-    })
-    .catch(() => false);
+  const saved = persist(id);
   update(id, { ended: true, saved });
   finishing.delete(id);
   sockets.get(id)?.close(1000, 'Research finished');
@@ -136,6 +145,7 @@ function connect(id: string) {
     if (!event) return;
     if (event.type === 'path') return void finish(id, event);
     push(id, event);
+    if (event.type === 'report_complete') update(id, { saved: persist(id) });
     if (event.type === 'error' || (event.type === 'logs' && event.content === 'error')) socket.close(1000, 'Research failed');
   };
 
