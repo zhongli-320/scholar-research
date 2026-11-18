@@ -90,7 +90,7 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
         {offline && <p role="alert" className="mt-3 text-sm text-rubric">PaperSeek 暂不可用，输入内容会保留。请检查服务或前往 <Link href="/settings?tab=paperseek" className="underline underline-offset-4">PaperSeek 设置</Link>。</p>}
         <div className="mt-6 flex flex-wrap gap-x-8 gap-y-4 text-sm">
           <label>数据源　<select className="gr-select" value={source} onChange={(event) => { setSource(event.target.value); setFields([]); setHint(''); setCitation(true); }}>{sources.length === 0 && <option value="openalex">OpenAlex</option>}{sources.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          <label>检索预算　<select className="gr-select" value={budget} onChange={(event) => setBudget(event.target.value)}><option value="fast">快速</option><option value="medium">中等</option><option value="high">深入</option><option value="max">最大</option></select></label>
+          <label>检索强度　<select className="gr-select" value={budget} onChange={(event) => setBudget(event.target.value)}><option value="fast">快速</option><option value="medium">中等</option><option value="high">深入</option><option value="max">最大</option></select></label>
         </div>
         <details className="mt-6 border-t border-rule-soft pt-4 text-sm">
           <summary className="cursor-pointer font-medium">高级条件</summary>
@@ -108,3 +108,4 @@ export default function LiteratureHome({ mockData }: { mockData?: HomeData }) {
     </main>
   );
 }
+
