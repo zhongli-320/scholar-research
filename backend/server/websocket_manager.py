@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import traceback
+from contextlib import suppress
 from typing import Dict, List
 
 from fastapi import WebSocket
@@ -67,39 +68,24 @@ class WebSocketManager:
                 await self.disconnect(websocket)
 
     async def disconnect(self, websocket: WebSocket):
-        """Disconnect a websocket."""
+        """Disconnect a websocket and release all per-connection resources."""
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+        queue = self.message_queues.pop(websocket, None)
+        sender = self.sender_tasks.pop(websocket, None)
+        if queue is not None:
+            with suppress(asyncio.QueueFull):
+                queue.put_nowait(None)
+        if sender is not None:
+            sender.cancel()
+            with suppress(asyncio.CancelledError):
+                await sender
+
         try:
-            if websocket in self.active_connections:
-                self.active_connections.remove(websocket)
-                
-                # Cancel sender task if it exists
-                if websocket in self.sender_tasks:
-                    try:
-                        self.sender_tasks[websocket].cancel()
-                        await self.message_queues[websocket].put(None)
-                    except Exception as e:
-                        logger.error(f"Error canceling sender task: {e}")
-                    finally:
-                        # Always try to clean up regardless of errors
-                        if websocket in self.sender_tasks:
-                            del self.sender_tasks[websocket]
-                
-                # Clean up message queue
-                if websocket in self.message_queues:
-                    del self.message_queues[websocket]
-                
-                # Finally close the WebSocket
-                try:
-                    await websocket.close()
-                except Exception as e:
-                    logger.info(f"WebSocket already closed: {e}")
-        except Exception as e:
-            logger.error(f"Error during WebSocket disconnection: {e}")
-            # Still try to close the connection if possible
-            try:
-                await websocket.close()
-            except Exception:
-                pass  # If this fails too, there's nothing more we can do
+            await websocket.close()
+        except Exception as exc:
+            logger.info(f"WebSocket already closed: {exc}")
 
     async def start_streaming(self, task, report_type, report_source, source_urls, document_urls, tone, websocket, headers=None, query_domains=[], mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
         """Start streaming the output."""
