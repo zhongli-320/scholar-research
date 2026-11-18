@@ -1,12 +1,36 @@
 """Fail startup when PaperSeek's durable artifact store is not usable."""
 
 from pathlib import Path
+import shutil
 from uuid import uuid4
 
 from paperseek_app.models import ArtifactRole, ArtifactVisibility, ArtifactWrite
 from paperseek_community.artifacts.files import FileArtifactStore
 
 data_dir = Path("/data")
+legacy_root = (data_dir / "artifacts" / "runs").resolve()
+legacy_cleanup_marker = data_dir / ".paperseek-file-checkpoints-pruned-v4"
+if legacy_root.exists() and not legacy_cleanup_marker.exists():
+    deleted_files = 0
+    deleted_bytes = 0
+    for checkpoint_dir in legacy_root.glob("*/checkpoint"):
+        target = checkpoint_dir.resolve()
+        if target.parent.parent != legacy_root:
+            raise RuntimeError(f"Refusing unexpected checkpoint path: {target}")
+        for file in target.rglob("*"):
+            if file.is_file():
+                deleted_files += 1
+                deleted_bytes += file.stat().st_size
+        shutil.rmtree(target)
+        if not any(target.parent.iterdir()):
+            target.parent.rmdir()
+    legacy_cleanup_marker.touch()
+    print(
+        f"Pruned {deleted_files} legacy checkpoint files "
+        f"({deleted_bytes / 1024 / 1024:.1f}MiB); final artifacts were preserved",
+        flush=True,
+    )
+
 sizes = sorted(
     ((path.stat().st_size, path) for path in data_dir.rglob("*") if path.is_file()),
     reverse=True,
