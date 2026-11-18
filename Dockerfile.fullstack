@@ -63,11 +63,12 @@ RUN pip config set global.timeout 60 && \
   pip install --no-cache-dir -r multi_agents/requirements.txt --upgrade --prefer-binary && \
   pip install --no-cache-dir "paperseek==1.0.0b6"
 
+COPY ./deploy/patch_paperseek_railway.py /tmp/patch_paperseek_railway.py
+RUN python /tmp/patch_paperseek_railway.py && rm /tmp/patch_paperseek_railway.py
+
 # GLM-5.3 can exhaust the small JSON-planning budget on reasoning before final content.
 RUN python -c 'from pathlib import Path; p=Path("/usr/local/lib/python3.12/site-packages/paperseek_core/llm.py"); s=p.read_text(); anchor="        response, api_key = await self._post("; patch="        if \"open.bigmodel.cn\" in self.base_url and self.model.rsplit(\"/\", 1)[-1].lower().startswith(\"glm-5.3\"):" + chr(10) + "            body[\"thinking\"] = {\"type\": \"enabled\"}" + chr(10) + "            body[\"reasoning_effort\"] = \"low\"" + chr(10) + "            body[\"max_tokens\"] = max(int(body.get(\"max_tokens\") or 0), 8192)" + chr(10); assert s.count(anchor) == 1, "PaperSeek GLM compatibility patch no longer applies"; p.write_text(s.replace(anchor, patch + anchor, 1)); compile(p.read_text(), str(p), "exec")'
 
-# Railway volumes can reject hard-link commits; an atomic rename is compatible with the single embedded worker.
-RUN python -c 'from pathlib import Path; p=Path("/usr/local/lib/python3.12/site-packages/paperseek_community/artifacts/files.py"); s=p.read_text(); old="                os.link(temporary, target)"; new="                temporary.rename(target)"; assert s.count(old) == 1, "PaperSeek artifact compatibility patch no longer applies"; p.write_text(s.replace(old, new, 1)); compile(p.read_text(), str(p), "exec")'
 
 ########################################################################
 # Stage 4: Final image with backend, frontend
