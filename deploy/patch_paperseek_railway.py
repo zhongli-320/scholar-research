@@ -13,6 +13,19 @@ source = path.read_text()
 start = source.index("    def put(self, artifact: ArtifactWrite) -> StoredArtifact:\n")
 end = source.index("    def read(self, artifact: StoredArtifact) -> bytes:\n", start)
 replacement = '''    def put(self, artifact: ArtifactWrite) -> StoredArtifact:
+        try:
+            return self._put_railway(artifact)
+        except Exception as exc:
+            import traceback
+            print(
+                f"PaperSeek artifact write failed: {type(exc).__name__}: {exc}; "
+                f"run={artifact.run_id} kind={artifact.kind} filename={artifact.filename}",
+                flush=True,
+            )
+            traceback.print_exc()
+            raise
+
+    def _put_railway(self, artifact: ArtifactWrite) -> StoredArtifact:
         target = self._target(artifact)
         digest = hashlib.sha256(artifact.content).hexdigest()
         if target.exists():
