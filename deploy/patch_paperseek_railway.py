@@ -65,6 +65,20 @@ replacement = '''    def _blob_connection(self):
                             created_at.isoformat(),
                         ),
                     )
+                if "/checkpoint/" in storage_key:
+                    connection.execute(
+                        """
+                        DELETE FROM artifact_blobs
+                        WHERE storage_key IN (
+                            SELECT storage_key
+                            FROM artifact_blobs
+                            WHERE storage_key LIKE ?
+                            ORDER BY created_at DESC
+                            LIMIT -1 OFFSET 3
+                        )
+                        """,
+                        (f"artifacts/runs/{artifact.run_id}/checkpoint/%",),
+                    )
         except ArtifactConflict as exc:
             print(
                 f"PaperSeek artifact conflict run={artifact.run_id} key={storage_key}: {exc}",
