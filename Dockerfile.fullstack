@@ -64,7 +64,7 @@ RUN pip config set global.timeout 60 && \
   pip install --no-cache-dir "paperseek==1.0.0b6"
 
 # GLM-5.3 can exhaust the small JSON-planning budget on reasoning before final content.
-RUN python -c 'from pathlib import Path; p=Path("/usr/local/lib/python3.12/site-packages/paperseek_core/llm.py"); s=p.read_text(); assert s.count("enabled") == 1, "PaperSeek GLM compatibility patch no longer applies"; p.write_text(s.replace("enabled", "disabled", 1))'
+RUN python -c 'from pathlib import Path; p=Path("/usr/local/lib/python3.12/site-packages/paperseek_core/llm.py"); s=p.read_text(); anchor="        response, api_key = await self._post("; patch="        if \"open.bigmodel.cn\" in self.base_url and self.model.rsplit(\"/\", 1)[-1].lower().startswith(\"glm-5.3\"):\\n            body[\"thinking\"] = {\"type\": \"disabled\"}\\n"; assert s.count(anchor) == 1, "PaperSeek GLM compatibility patch no longer applies"; p.write_text(s.replace(anchor, patch + anchor, 1))'
 
 ########################################################################
 # Stage 4: Final image with backend, frontend
