@@ -45,9 +45,9 @@ const config: Config = {
         'teal-glow': '0 0 40px rgba(13, 148, 136, 0.5)',
       },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
-        body: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        code: ['var(--font-code)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        display: ['Georgia', 'ui-serif', 'serif'],
+        body: ['ui-sans-serif', 'system-ui', 'sans-serif'],
+        code: ['ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
         paper: { DEFAULT: '#EEE7D8', deep: '#E6DDCA', hi: '#F6F1E7' },
