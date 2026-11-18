@@ -140,6 +140,32 @@ npm run dev
 - PaperSeek 的 GLM-5.3 JSON 规划请求扩大了输出预算，并降低推理强度，避免结构化结果被截断。
 - PDF 中文显示依赖容器字体；若需要正式发布 PDF，建议在镜像中加入完整的 CJK 字体。
 
+## PaperSeek 存储故障处理
+
+出现 `artifact_persistence_failed` 时，不要只看启动自检。真实检索检查点可能达到数 MiB，必须结合 Railway 运行日志和磁盘指标判断。
+
+1. 在 Railway Metrics 查看 `DISK_USAGE_GB`。本项目的卷容量为 0.5 GB，接近上限时 SQLite 通常会报 `database or disk is full`。
+2. 检查运行日志中是否出现 `PaperSeek artifact put failed`、`RunPersistenceError` 或 `database or disk is full`。
+3. 核对 `/data` 中的大文件。可以清理的范围仅限：
+   - `/data/artifacts/runs/<run-id>/checkpoint/` 下的旧恢复检查点；
+   - `paperseek-artifacts.db` 中已经失效的 checkpoint 记录。
+4. 不要删除 `paperseek.db`、`reports.json`、`final_result`、`bibliometric_corpus`、`export_json` 或期刊指标文件。
+5. 清理后必须验证：
+   - 启动日志出现 `PaperSeek artifact storage and checkpoint retention checks passed`；
+   - 用真实宽泛主题完成一次检索，而不只是运行 16 字节的小型自检；
+   - 最终结果能在文献计量页被选择；
+   - 日志中不再出现工件保存或磁盘满错误。
+
+当前防复发措施：
+
+- 检查点使用 zlib 压缩后写入独立 SQLite；
+- SQLite 使用 WAL、busy timeout 和自动提交；
+- 每个任务只保留最近 3 份恢复检查点，失败任务不会无限堆积；
+- 部署迁移会清除旧版文件存储遗留的 checkpoint，但保留最终结果；
+- 服务启动时验证写入、读取、删除和检查点保留上限。
+
+容量边界：0.5 GB 是有限空间。检查点增长已经受控，但长期积累大量正常检索结果后仍可能耗尽容量。此时应优先扩容 Railway Volume，或另行制定检索历史保留策略；不要直接删除成功结果。
+
 ## 仓库与分支
 
 - 仓库：<https://github.com/zhongli-320/scholar-research>
