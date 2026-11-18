@@ -15,7 +15,8 @@ export async function settingsGateway(request: Request, segments: string[], shap
   // Next may use its listening hostname in request.url. Only trust loopback Host values.
   const host = request.headers.get('host') ?? url.host;
   const address = `${url.protocol}//${host}`;
-  if (!/^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host) || !URL.canParse(address)) {
+  const isLoopback = /^(?:localhost|127\.0\.0\.1|\[::1\])(?::\d{1,5})?$/i.test(host);
+  if (!URL.canParse(address) || (request.method !== 'GET' && !isLoopback)) {
     return error(403, 'FORBIDDEN_ORIGIN');
   }
   if (request.method !== 'GET' && request.headers.get('origin') !== new URL(address).origin) {

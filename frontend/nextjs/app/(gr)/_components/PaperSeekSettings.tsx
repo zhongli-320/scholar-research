@@ -15,7 +15,7 @@ function testStatus(test: TestStatus) {
   return test.code ? `${status} (${test.code})` : status;
 }
 
-export default function PaperSeekSettings() {
+export default function PaperSeekSettings({ readOnly = false }: { readOnly?: boolean }) {
   const [settings, setSettings] = useState<PaperSeekWorkspaceSettings | null>(null);
   const [selected, setSelected] = useState('');
   const [status, setStatus] = useState('');
@@ -60,11 +60,12 @@ export default function PaperSeekSettings() {
   const isDefault = current && [settings.defaults.search_llm, settings.defaults.review_llm, settings.defaults.embedding, settings.defaults.reranker, settings.defaults.decision].includes(current.id);
   const alternatives = current ? settings.connections.filter(c => c.kind === current.kind && c.id !== current.id) : [];
   return <div className="space-y-10 p-5 sm:p-8">
+    {readOnly && <p className="border border-rule-soft bg-paper p-4 text-sm text-ink-2">线上配置由 Railway 环境变量统一管理。为保护 API 密钥，此页面仅供查看；修改变量后重新部署即可生效。</p>}
     <div>
       <p role="status" aria-live="polite">{status}</p>
       {refreshFailed && <button disabled={busy} className="gr-btn-line mt-2" type="button" onClick={() => void retryRefresh()}>重新加载设置</button>}
     </div>
-    <fieldset disabled={busy} aria-busy={busy} className="min-w-0 space-y-10">
+    <fieldset disabled={busy || readOnly} aria-busy={busy} className="min-w-0 space-y-10">
     <section><h2 className="text-xl font-semibold">模型连接</h2>
       <label className="mt-3 block">选择连接<select className={input} value={selected} onChange={e => { setSelected(e.target.value); setReplacement(''); }}><option value="">新增连接</option>{settings.connections.map(c => <option key={c.id} value={c.id}>{c.kind} · {c.provider} · {c.model}</option>)}</select></label>
       <form key={selected} className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); const form = e.currentTarget; const data = connectionData(new FormData(form)); void run(async () => { if (current) await updateConnection(current.id, data); else await createConnection(data); form.reset(); setSelected(''); }); }}>

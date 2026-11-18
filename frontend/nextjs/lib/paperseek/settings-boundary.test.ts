@@ -46,13 +46,13 @@ describe('settings gateway boundary', () => {
       expect(fetcher).not.toHaveBeenCalled();
     },
   );
-  it('blocks a settings read through a foreign Host before connecting upstream', async () => {
-    setup({});
+  it('allows a safe read through a public Host while keeping writes loopback-only', async () => {
+    setup({ connections: [], sources: [], defaults: { search_llm: '', review_llm: '', pre_ranking: 'local_fusion', embedding: '', reranker: '', decision: '', source: '' }, proxy: null });
     const response = await GET(new Request('http://localhost:3000/api/paperseek/settings', {
       headers: { Host: 'evil.example:3000' },
     }));
-    expect(response.status).toBe(403);
-    expect(fetcher).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(fetcher).toHaveBeenCalledOnce();
   });
   it('allows a loopback settings read without an Origin header', async () => {
     setup({ connections: [], sources: [], defaults: { search_llm: '', review_llm: '', pre_ranking: 'local_fusion', embedding: '', reranker: '', decision: '', source: '' }, proxy: null });
