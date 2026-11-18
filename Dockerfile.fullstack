@@ -15,7 +15,7 @@ RUN npm run build
 ########################################################################
 # Stage 2: Browser and backend build tools installation
 ########################################################################
-FROM python:3.14.2-slim-bookworm AS install-browser
+FROM python:3.12-slim-bookworm AS install-browser
 
 # Install Chromium, Chromedriver, Firefox, Geckodriver, and build tools in one layer
 RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries \
@@ -60,7 +60,8 @@ RUN pip config set global.timeout 60 && \
   pip config set global.retries 3 && \
   pip install --upgrade pip && \
   pip install --no-cache-dir -r requirements.txt --upgrade --prefer-binary && \
-  pip install --no-cache-dir -r multi_agents/requirements.txt --upgrade --prefer-binary
+  pip install --no-cache-dir -r multi_agents/requirements.txt --upgrade --prefer-binary && \
+  pip install --no-cache-dir "paperseek==1.0.0b6"
 
 ########################################################################
 # Stage 4: Final image with backend, frontend
@@ -80,7 +81,11 @@ RUN apt-get update && \
 ARG HOST=0.0.0.0
 ENV HOST=${HOST}
 
-ARG PORT=8000
+ARG BACKEND_PORT=8000
+ENV BACKEND_PORT=${BACKEND_PORT}
+
+# Railway sends public traffic to this port. Nginx proxies the two internal APIs.
+ARG PORT=3000
 ENV PORT=${PORT}
 EXPOSE ${PORT}
 
@@ -92,6 +97,12 @@ EXPOSE ${NEXT_PORT}
 ARG NEXT_INTERNAL_PORT=3001
 ENV NEXT_INTERNAL_PORT=${NEXT_INTERNAL_PORT}
 
+ARG PAPERSEEK_PORT=8767
+ENV PAPERSEEK_PORT=${PAPERSEEK_PORT}
+ENV PAPERSEEK_API_URL=http://127.0.0.1:8767
+ENV PAPERSEEK_DATABASE=/data/paperseek.db
+ENV PAPERSEEK_OWNERSHIP_FILE=/data/scholar-ownership.json
+
 # Copy application files
 COPY ./ ./
 
@@ -102,6 +113,8 @@ COPY --from=frontend-builder /app/frontend/nextjs/public ./frontend/nextjs/publi
 COPY --from=frontend-builder /app/frontend/nextjs/package.json ./frontend/nextjs/package.json
 # Ensure next.config.mjs and other necessary files are present
 COPY --from=frontend-builder /app/frontend/nextjs/next.config.mjs ./frontend/nextjs/next.config.mjs
+
+RUN mkdir -p /data
 
 # Create nginx configuration
 RUN echo 'events {' > /etc/nginx/nginx.conf && \
@@ -178,7 +191,17 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
   echo 'logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '[program:backend]' >> /etc/supervisor/conf.d/supervisord.conf && \
-  echo 'command=uvicorn main:app --host %(ENV_HOST)s --port %(ENV_PORT)s' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'command=uvicorn main:app --host %(ENV_HOST)s --port %(ENV_BACKEND_PORT)s' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'directory=/usr/src/app' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'stdout_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'stderr_logfile=/dev/stderr' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo '[program:paperseek]' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'command=paperseek serve --host 127.0.0.1 --port %(ENV_PAPERSEEK_PORT)s --database %(ENV_PAPERSEEK_DATABASE)s' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'directory=/usr/src/app' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
@@ -198,7 +221,7 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
   echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '[program:nginx]' >> /etc/supervisor/conf.d/supervisord.conf && \
-  echo 'command=nginx -g "daemon off;"' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'command=/bin/sh -c "sed -i s/listen\\ 3000/listen\\ %(ENV_PORT)s/ /etc/nginx/nginx.conf && exec nginx -g '\''daemon off;'\''"' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'stdout_logfile=/dev/stdout' >> /etc/supervisor/conf.d/supervisord.conf && \
