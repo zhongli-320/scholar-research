@@ -230,7 +230,7 @@ RUN echo '[supervisord]' > /etc/supervisor/conf.d/supervisord.conf && \
   echo 'stderr_logfile_maxbytes=0' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo '[program:paperseek]' >> /etc/supervisor/conf.d/supervisord.conf && \
-  echo 'command=paperseek serve --host 127.0.0.1 --port %(ENV_PAPERSEEK_PORT)s --database %(ENV_PAPERSEEK_DATABASE)s' >> /etc/supervisor/conf.d/supervisord.conf && \
+  echo 'command=/bin/sh -c "python /usr/src/app/deploy/verify_paperseek_storage.py && exec paperseek serve --host 127.0.0.1 --port %(ENV_PAPERSEEK_PORT)s --database %(ENV_PAPERSEEK_DATABASE)s"' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'directory=/usr/src/app' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autostart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
   echo 'autorestart=true' >> /etc/supervisor/conf.d/supervisord.conf && \
