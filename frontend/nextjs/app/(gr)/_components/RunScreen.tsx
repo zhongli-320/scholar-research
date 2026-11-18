@@ -486,6 +486,11 @@ export default function RunScreen({ run, label, date, sharePath, chatInitial = [
               )}
             </div>
           </div>
+          {!done && (
+            <section aria-label="研究过程" className="mb-8 rounded-sm border border-rule bg-paper-deep/35 p-4 sm:p-6">
+              <StageList run={run} />
+            </section>
+          )}
           <Sheet
             run={run}
             html={html}
