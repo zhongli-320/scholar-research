@@ -46,7 +46,7 @@ Scholar Research 是一个面向学术研究场景的开源 Web 应用，将 Pap
 - 文献检索与计量：PaperSeek Community
 - 入口代理：Nginx
 - 进程管理：Supervisord
-- 持久化：SQLite、JSON 报告存储、Railway Volume
+- 持久化：PaperSeek 元数据 SQLite、工件 SQLite、JSON 综述历史、Railway Volume
 - 部署：单容器全栈部署到 Railway
 
 服务结构：
@@ -136,7 +136,7 @@ npm run dev
 ## 稳定性说明
 
 - Railway 低内存实例下，过高的抓取并发可能导致综述后端被系统终止。生产镜像已限制同时综述数和抓取线程数。
-- Railway Volume 对硬链接提交的支持不稳定。镜像对 PaperSeek 1.0.0b6 的本地文件提交做了兼容处理。
+- PaperSeek 1.0.0b6 默认工件提交依赖临时文件与硬链接。生产镜像将检索检查点和结果工件持久化到独立 SQLite，并在服务启动前对实际 `/data` 卷执行写入、读取、删除自检。旧文件工件仍可兼容读取。
 - PaperSeek 的 GLM-5.3 JSON 规划请求扩大了输出预算，并降低推理强度，避免结构化结果被截断。
 - PDF 中文显示依赖容器字体；若需要正式发布 PDF，建议在镜像中加入完整的 CJK 字体。
 
