@@ -111,8 +111,8 @@ ENV PAPERSEEK_DATABASE=/data/paperseek.db
 ENV PAPERSEEK_OWNERSHIP_FILE=/data/scholar-ownership.json
 ENV REPORT_STORE_PATH=/data/reports.json
 ENV LANGUAGE=chinese
-ENV MAX_CONCURRENT_RESEARCH=1
-ENV MAX_SCRAPER_WORKERS=4
+ENV MAX_CONCURRENT_RESEARCH=2
+ENV MAX_SCRAPER_WORKERS=2
 
 # Copy application files
 COPY ./ ./
@@ -126,6 +126,7 @@ COPY --from=frontend-builder /app/frontend/nextjs/package.json ./frontend/nextjs
 COPY --from=frontend-builder /app/frontend/nextjs/next.config.mjs ./frontend/nextjs/next.config.mjs
 
 RUN mkdir -p /data
+RUN python -m py_compile backend/server/websocket_manager.py backend/server/server_utils.py
 
 # Create nginx configuration
 RUN echo 'events {' > /etc/nginx/nginx.conf && \
