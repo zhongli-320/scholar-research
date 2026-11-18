@@ -26,14 +26,13 @@ it('renders product results and paginates entirely through fixtures', async () =
   await act(async () => root.unmount());
 });
 
-it('renders the product network and readable node list without a service', async () => {
+it('renders grouped bibliometrics without the removed network panel', async () => {
   const element = document.createElement('div'); const root = createRoot(element);
   await act(async () => root.render(<FixtureBoundary><Bibliometrics /></FixtureBoundary>));
   expect(element.textContent).toContain('示例文献计量分析');
-  const button = [...element.querySelectorAll('button')].find(item => item.textContent === '生成网络')!;
-  await act(async () => button.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  expect(element.querySelector('svg[aria-label="网络图，节点清单位于图后"]')).not.toBeNull();
-  expect(element.querySelectorAll('[data-network-node]')).toHaveLength(2);
+  for (const heading of ['时间与文献载体', '研究主体与地域', '研究主题', '期刊评价', '数据质量']) expect(element.textContent).toContain(heading);
+  expect(element.textContent).not.toContain('网络分析');
+  expect(element.querySelector('[data-network-node]')).toBeNull();
   await act(async () => root.unmount());
 });
 
