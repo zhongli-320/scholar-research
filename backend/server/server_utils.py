@@ -416,8 +416,22 @@ async def handle_websocket_communication(websocket, manager):
                 print(f"WebSocket error: {e}")
                 break
     finally:
-        if running_task and not running_task.done():
-            running_task.cancel()
+        if running_task is not None:
+            if not running_task.done():
+                running_task.cancel()
+            try:
+                await running_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.exception("Research task failed while the WebSocket was closing")
+        feedback_queue = getattr(websocket.state, "human_feedback", None)
+        if feedback_queue is not None:
+            while not feedback_queue.empty():
+                try:
+                    feedback_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    break
 
 def extract_command_data(json_data: Dict) -> tuple:
     public_demo = os.getenv("PUBLIC_DEMO_MODE") == "1"
