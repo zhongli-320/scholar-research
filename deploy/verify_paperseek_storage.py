@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import shutil
+import sqlite3
 from uuid import uuid4
 
 from paperseek_app.models import ArtifactRole, ArtifactVisibility, ArtifactWrite
@@ -31,16 +32,6 @@ if legacy_root.exists() and not legacy_cleanup_marker.exists():
         flush=True,
     )
 
-sizes = sorted(
-    ((path.stat().st_size, path) for path in data_dir.rglob("*") if path.is_file()),
-    reverse=True,
-)
-print(
-    "Largest persistent files: "
-    + ", ".join(f"{path.relative_to(data_dir)}={size / 1024 / 1024:.1f}MiB" for size, path in sizes[:12]),
-    flush=True,
-)
-
 database = Path("/data/paperseek-artifacts.db")
 cleanup_marker = Path("/data/.paperseek-artifacts-rebuilt-v3")
 if not cleanup_marker.exists():
@@ -50,17 +41,28 @@ if not cleanup_marker.exists():
     print("Rebuilt full PaperSeek artifact sidecar; search metadata was preserved", flush=True)
 
 store = FileArtifactStore("/data")
-draft = ArtifactWrite(
-    run_id=str(uuid4()),
-    kind="checkpoint",
-    role=ArtifactRole.RECOVERY,
-    visibility=ArtifactVisibility.INTERNAL,
-    filename="state-startup-smoke.json",
-    media_type="application/json",
-    schema_version=1,
-    content=b'{"storage":"ok"}',
-)
-stored = store.put(draft)
-assert store.read(stored) == draft.content
-store.delete(stored)
-print("PaperSeek artifact storage check passed", flush=True)
+run_id = str(uuid4())
+stored_artifacts = []
+for index in range(4):
+    draft = ArtifactWrite(
+        run_id=run_id,
+        kind="checkpoint",
+        role=ArtifactRole.RECOVERY,
+        visibility=ArtifactVisibility.INTERNAL,
+        filename=f"state-startup-smoke-{index}.json",
+        media_type="application/json",
+        schema_version=1,
+        content=f'{{"storage":"ok","index":{index}}}'.encode(),
+    )
+    stored_artifacts.append(store.put(draft))
+
+assert store.read(stored_artifacts[-1]) == b'{"storage":"ok","index":3}'
+with sqlite3.connect(database) as connection:
+    retained = connection.execute(
+        "SELECT COUNT(*) FROM artifact_blobs WHERE storage_key LIKE ?",
+        (f"artifacts/runs/{run_id}/checkpoint/%",),
+    ).fetchone()[0]
+assert retained == 3
+for stored in stored_artifacts:
+    store.delete(stored)
+print("PaperSeek artifact storage and checkpoint retention checks passed", flush=True)
