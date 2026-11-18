@@ -63,6 +63,9 @@ RUN pip config set global.timeout 60 && \
   pip install --no-cache-dir -r multi_agents/requirements.txt --upgrade --prefer-binary && \
   pip install --no-cache-dir "paperseek==1.0.0b6"
 
+# GLM-5.3 can exhaust the small JSON-planning budget on reasoning before final content.
+RUN python -c 'from pathlib import Path; p=Path("/usr/local/lib/python3.12/site-packages/paperseek_core/llm.py"); s=p.read_text(); old="return {\"thinking\": {\"type\": \"enabled\"}, \"reasoning_effort\": \"low\"}"; new="return {\"thinking\": {\"type\": \"disabled\"}}"; assert s.count(old) == 1, "PaperSeek GLM compatibility patch no longer applies"; p.write_text(s.replace(old, new))'
+
 ########################################################################
 # Stage 4: Final image with backend, frontend
 ########################################################################
@@ -153,6 +156,14 @@ RUN echo 'events {' > /etc/nginx/nginx.conf && \
   echo '        }' >> /etc/nginx/nginx.conf && \
   echo '' >> /etc/nginx/nginx.conf && \
   echo '        location /reports {' >> /etc/nginx/nginx.conf && \
+  echo '            proxy_pass http://127.0.0.1:8000;' >> /etc/nginx/nginx.conf && \
+  echo '            proxy_set_header Host $host;' >> /etc/nginx/nginx.conf && \
+  echo '            proxy_set_header X-Real-IP $remote_addr;' >> /etc/nginx/nginx.conf && \
+  echo '            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;' >> /etc/nginx/nginx.conf && \
+  echo '            proxy_set_header X-Forwarded-Proto $scheme;' >> /etc/nginx/nginx.conf && \
+  echo '        }' >> /etc/nginx/nginx.conf && \
+  echo '' >> /etc/nginx/nginx.conf && \
+  echo '        location ~ ^/(files|upload)/ {' >> /etc/nginx/nginx.conf && \
   echo '            proxy_pass http://127.0.0.1:8000;' >> /etc/nginx/nginx.conf && \
   echo '            proxy_set_header Host $host;' >> /etc/nginx/nginx.conf && \
   echo '            proxy_set_header X-Real-IP $remote_addr;' >> /etc/nginx/nginx.conf && \
