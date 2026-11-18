@@ -118,8 +118,8 @@ npm run dev
 | --- | --- |
 | `PAPERSEEK_DATABASE` | PaperSeek SQLite 路径，生产默认 `/data/paperseek.db` |
 | `REPORT_STORE_PATH` | 综述历史路径，生产默认 `/data/reports.json` |
-| `MAX_CONCURRENT_RESEARCH` | 同时生成综述的数量，生产默认 1 |
-| `MAX_SCRAPER_WORKERS` | 单次综述抓取并发，生产默认 4 |
+| `MAX_CONCURRENT_RESEARCH` | 同时生成综述的数量，生产默认 2 |
+| `MAX_SCRAPER_WORKERS` | 单次综述抓取并发，生产默认 2 |
 
 部署时必须将持久化卷挂载到 `/data`。
 
@@ -135,7 +135,7 @@ npm run dev
 
 ## 稳定性说明
 
-- Railway 低内存实例下，过高的抓取并发可能导致综述后端被系统终止。生产镜像已限制同时综述数和抓取线程数。
+- Railway 低内存实例下，过高的抓取并发可能导致综述后端被系统终止。生产镜像允许同时运行 2 个综述任务，并将每个任务的抓取线程限制为 2；WebSocket 断开时会等待研究任务和发送任务完成取消清理。
 - PaperSeek 1.0.0b6 默认工件提交依赖临时文件与硬链接。生产镜像将检索检查点和结果工件持久化到独立 SQLite，并在服务启动前对实际 `/data` 卷执行写入、读取、删除自检。旧文件工件仍可兼容读取。
 - PaperSeek 的 GLM-5.3 JSON 规划请求扩大了输出预算，并降低推理强度，避免结构化结果被截断。
 - PDF 中文显示依赖容器字体；若需要正式发布 PDF，建议在镜像中加入完整的 CJK 字体。
