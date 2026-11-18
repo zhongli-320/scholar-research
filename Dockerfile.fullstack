@@ -105,6 +105,8 @@ ENV PAPERSEEK_PORT=${PAPERSEEK_PORT}
 ENV PAPERSEEK_API_URL=http://127.0.0.1:8767
 ENV PAPERSEEK_DATABASE=/data/paperseek.db
 ENV PAPERSEEK_OWNERSHIP_FILE=/data/scholar-ownership.json
+ENV REPORT_STORE_PATH=/data/reports.json
+ENV LANGUAGE=chinese
 
 # Copy application files
 COPY ./ ./
