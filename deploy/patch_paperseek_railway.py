@@ -15,7 +15,10 @@ start = source.index("    def put(self, artifact: ArtifactWrite) -> StoredArtifa
 end = source.index("    def _prune_empty_parents(self, directory: Path) -> None:\n", start)
 replacement = '''    def _blob_connection(self):
         database = self.data_dir / "paperseek-artifacts.db"
-        connection = sqlite3.connect(database, timeout=30)
+        connection = sqlite3.connect(database, timeout=30, isolation_level=None)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS artifact_blobs (
@@ -61,9 +64,18 @@ replacement = '''    def _blob_connection(self):
                             created_at.isoformat(),
                         ),
                     )
-        except ArtifactConflict:
+        except ArtifactConflict as exc:
+            print(
+                f"PaperSeek artifact conflict run={artifact.run_id} key={storage_key}: {exc}",
+                flush=True,
+            )
             raise
         except (OSError, sqlite3.Error, ValueError) as exc:
+            print(
+                f"PaperSeek artifact put failed run={artifact.run_id} key={storage_key} "
+                f"size={len(artifact.content)} error={type(exc).__name__}: {exc}",
+                flush=True,
+            )
             raise ArtifactPersistenceError("The artifact could not be committed.") from exc
 
         artifact_id = str(
