@@ -6,6 +6,17 @@ from uuid import uuid4
 from paperseek_app.models import ArtifactRole, ArtifactVisibility, ArtifactWrite
 from paperseek_community.artifacts.files import FileArtifactStore
 
+data_dir = Path("/data")
+sizes = sorted(
+    ((path.stat().st_size, path) for path in data_dir.rglob("*") if path.is_file()),
+    reverse=True,
+)
+print(
+    "Largest persistent files: "
+    + ", ".join(f"{path.relative_to(data_dir)}={size / 1024 / 1024:.1f}MiB" for size, path in sizes[:12]),
+    flush=True,
+)
+
 database = Path("/data/paperseek-artifacts.db")
 cleanup_marker = Path("/data/.paperseek-artifacts-rebuilt-v3")
 if not cleanup_marker.exists():
