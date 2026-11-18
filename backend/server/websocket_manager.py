@@ -102,11 +102,28 @@ class WebSocketManager:
         )
         return report
 
+def _release_task_memory() -> None:
+    """Collect task-local cycles and return free glibc arenas when possible."""
+    import gc
+
+    gc.collect()
+    if os.name == "posix":
+        try:
+            import ctypes
+
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+        except (OSError, AttributeError):
+            pass
+
+
 async def run_agent(*args, **kwargs):
-    if _research_semaphore:
-        async with _research_semaphore:
-            return await _run_agent(*args, **kwargs)
-    return await _run_agent(*args, **kwargs)
+    try:
+        if _research_semaphore:
+            async with _research_semaphore:
+                return await _run_agent(*args, **kwargs)
+        return await _run_agent(*args, **kwargs)
+    finally:
+        _release_task_memory()
 
 
 async def _run_agent(task, report_type, report_source, source_urls, document_urls, tone: Tone, websocket, stream_output=stream_output, headers=None, query_domains=[], config_path="", return_researcher=False, mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
