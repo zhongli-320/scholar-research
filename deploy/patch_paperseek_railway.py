@@ -10,7 +10,7 @@ preserving the public ArtifactStore contract and legacy file reads.
 from pathlib import Path
 
 path = Path("/usr/local/lib/python3.12/site-packages/paperseek_community/artifacts/files.py")
-source = path.read_text().replace("import re\n", "import re\nimport sqlite3\n")
+source = path.read_text().replace("import re\n", "import re\nimport sqlite3\nimport zlib\n")
 start = source.index("    def put(self, artifact: ArtifactWrite) -> StoredArtifact:\n")
 end = source.index("    def _prune_empty_parents(self, directory: Path) -> None:\n", start)
 replacement = '''    def _blob_connection(self):
@@ -36,6 +36,7 @@ replacement = '''    def _blob_connection(self):
         target = self._target(artifact)
         storage_key = target.relative_to(self.data_dir).as_posix()
         digest = hashlib.sha256(artifact.content).hexdigest()
+        stored_content = b"PSZ1" + zlib.compress(artifact.content, level=1)
         created_at = datetime.now(timezone.utc)
         try:
             with self._blob_connection() as connection:
@@ -60,7 +61,7 @@ replacement = '''    def _blob_connection(self):
                             storage_key,
                             digest,
                             len(artifact.content),
-                            sqlite3.Binary(artifact.content),
+                            sqlite3.Binary(stored_content),
                             created_at.isoformat(),
                         ),
                     )
@@ -107,6 +108,11 @@ replacement = '''    def _blob_connection(self):
             raise ArtifactPersistenceError("The artifact could not be read.") from exc
         if row is not None:
             content = bytes(row[0])
+            if content.startswith(b"PSZ1"):
+                try:
+                    content = zlib.decompress(content[4:])
+                except zlib.error as exc:
+                    raise ArtifactIntegrityError("The compressed artifact is invalid.") from exc
             if int(row[2]) != artifact.size or len(content) != artifact.size:
                 raise ArtifactIntegrityError("The artifact size does not match its metadata.")
             if row[1] != artifact.sha256 or hashlib.sha256(content).hexdigest() != artifact.sha256:
