@@ -24,7 +24,7 @@ export default function BibliometricsHome() {
     if (lock.current) return; lock.current = true; setBusy(true); setError('');
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : '操作失败'); } finally { lock.current = false; setBusy(false); }
   }
-  const eligible = searches?.items.filter((item) => item.status === 'completed' && (!item.kind || item.kind === 'research')) ?? [];
+  const eligible = searches?.items.filter((item) => ['completed', 'completed_with_warnings'].includes(item.status) && (!item.kind || item.kind === 'research')) ?? [];
   return <main className="mx-auto w-full max-w-[1080px] px-5 pb-20 pt-10 sm:px-8 sm:pt-14">
     <header className="max-w-3xl"><p className="gr-eye">PaperSeek · Bibliometrics</p><h1 className="mt-5 font-display text-5xl font-semibold tracking-[-0.04em]">文献计量</h1><p className="mt-4 text-base leading-7 text-ink-3">从已完成的文献检索创建分析，查看主题、作者、机构、期刊分区与引用网络。</p></header>
     {error && <p role="alert" className="mt-6 border-l-2 border-rubric bg-rubric/5 px-4 py-3 text-rubric">{error}</p>}
