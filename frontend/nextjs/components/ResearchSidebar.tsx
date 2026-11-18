@@ -56,11 +56,11 @@ const ResearchSidebar: React.FC<ResearchSidebarProps> = ({
   // Animation variants
   const sidebarVariants = {
     open: { 
-      width: 'var(--sidebar-width)', 
+      width: 'min(300px, 85vw)', 
       transition: { type: 'spring', stiffness: 250, damping: 25 } 
     },
     closed: { 
-      width: 'var(--sidebar-min-width)', 
+      width: '12px', 
       transition: { type: 'spring', stiffness: 250, damping: 25, delay: 0.1 } 
     }
   };
@@ -93,10 +93,6 @@ const ResearchSidebar: React.FC<ResearchSidebarProps> = ({
         variants={sidebarVariants}
         initial={false}
         animate={isOpen ? 'open' : 'closed'}
-        style={{
-          '--sidebar-width': 'min(300px, 85vw)',
-          '--sidebar-min-width': '12px'
-        } as React.CSSProperties}
       >
         {/* Sidebar content */}
         <div 
