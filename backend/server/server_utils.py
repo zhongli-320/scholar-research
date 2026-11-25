@@ -25,6 +25,7 @@ import logging
 import hashlib
 
 from .multi_agent_runner import run_multi_agent_task
+from .report_store import ReportStore
 
 # Import chat agent
 try:
@@ -38,11 +39,16 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Keep detached research jobs alive after their browser connection disappears.
+_background_tasks: set[asyncio.Task] = set()
+
 class CustomLogsHandler:
     """Custom handler to capture streaming logs from the research process"""
     def __init__(self, websocket, task: str):
         self.logs = []
         self.websocket = websocket
+        self.started_at = time.monotonic()
+        self._write_lock = asyncio.Lock()
         sanitized_filename = sanitize_filename(f"task_{int(time.time())}_{task}")
         self.log_file = os.path.join("outputs", f"{sanitized_filename}.json")
         self.timestamp = datetime.now().isoformat()
@@ -63,28 +69,34 @@ class CustomLogsHandler:
 
     async def send_json(self, data: Dict[str, Any]) -> None:
         """Store log data and send to websocket"""
-        # Send to websocket for real-time display
+        event = dict(data)
+        event.setdefault("t", time.monotonic() - self.started_at)
+
+        # Persist before attempting delivery. A closed socket must not lose the
+        # event or abort the research job.
+        async with self._write_lock:
+            self.logs.append(event)
+            with open(self.log_file, 'r') as f:
+                log_data = json.load(f)
+
+            if event.get('type'):
+                log_data['events'].append({
+                    "timestamp": datetime.now().isoformat(),
+                    "type": "event",
+                    "data": data
+                })
+            else:
+                log_data['content'].update(event)
+
+            with open(self.log_file, 'w') as f:
+                json.dump(log_data, f, indent=2)
+
         if self.websocket:
-            await self.websocket.send_json(data)
-            
-        # Read current log file
-        with open(self.log_file, 'r') as f:
-            log_data = json.load(f)
-            
-        # Update appropriate section based on data type
-        if data.get('type') == 'logs':
-            log_data['events'].append({
-                "timestamp": datetime.now().isoformat(),
-                "type": "event",
-                "data": data
-            })
-        else:
-            # Update content section for other types of data
-            log_data['content'].update(data)
-            
-        # Save updated log file
-        with open(self.log_file, 'w') as f:
-            json.dump(log_data, f, indent=2)
+            try:
+                await self.websocket.send_json(data)
+            except Exception as exc:
+                logger.info(f"WebSocket unavailable; research continues in background: {exc}")
+                self.websocket = None
 
 
 class Researcher:
@@ -146,6 +158,7 @@ async def handle_start_command(websocket, data: str, manager):
         mcp_strategy,
         mcp_configs,
         max_search_results,
+        research_id,
     ) = extract_command_data(json_data)
 
     if not task or not report_type:
@@ -178,12 +191,56 @@ async def handle_start_command(websocket, data: str, manager):
         mcp_strategy,
         mcp_configs,
         max_search_results,
+        logs_handler=logs_handler,
     )
     report = str(report)
     file_paths = await generate_report_files(report, sanitized_filename)
     # Add JSON log path to file_paths
     file_paths["json"] = os.path.relpath(logs_handler.log_file)
-    await send_file_paths(websocket, file_paths)
+    await logs_handler.send_json({"type": "path", "output": file_paths})
+    await persist_completed_report(
+        research_id or sanitized_filename,
+        task,
+        report,
+        logs_handler.logs,
+        report_type=report_type,
+        report_source=report_source,
+        tone=tone,
+        query_domains=query_domains,
+    )
+
+
+async def persist_completed_report(
+    research_id: str,
+    question: str,
+    report: str,
+    events: List[Dict[str, Any]],
+    *,
+    report_type: str,
+    report_source: str,
+    tone: str,
+    query_domains: List[str],
+) -> None:
+    """Save a completed WebSocket job even when its browser has disconnected."""
+    store = ReportStore(Path(os.getenv("REPORT_STORE_PATH", os.path.join("data", "reports.json"))))
+    await store.upsert_report(
+        research_id,
+        {
+            "id": research_id,
+            "question": question,
+            "answer": report,
+            "orderedData": events,
+            "chatMessages": [],
+            "timestamp": int(time.time() * 1000),
+            "brief": {
+                "report_type": report_type,
+                "report_source": report_source,
+                "tone": tone,
+                "domains": query_domains,
+            },
+        },
+    )
+    logger.info(f"Completed research saved: {research_id}")
 
 
 async def handle_human_feedback(data: str):
@@ -341,6 +398,7 @@ def is_human_feedback_message(data: str) -> bool:
 
 async def handle_websocket_communication(websocket, manager):
     running_task: asyncio.Task | None = None
+    stop_requested = False
     # This loop is the socket's only reader, so plan feedback for the
     # multi agent HumanAgent is handed over through this queue.
     websocket.state.human_feedback = asyncio.Queue()
@@ -354,15 +412,21 @@ async def handle_websocket_communication(websocket, manager):
                 raise
             except Exception as e:
                 logger.error(f"Error running task: {e}\n{traceback.format_exc()}")
-                await websocket.send_json(
-                    {
-                        "type": "logs",
-                        "content": "error",
-                        "output": f"Error: {e}",
-                    }
-                )
+                try:
+                    await websocket.send_json(
+                        {
+                            "type": "logs",
+                            "content": "error",
+                            "output": f"Error: {e}",
+                        }
+                    )
+                except Exception:
+                    logger.info("Research failed after its WebSocket disconnected")
 
-        return asyncio.create_task(safe_run())
+        task = asyncio.create_task(safe_run())
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+        return task
 
     try:
         while True:
@@ -407,9 +471,10 @@ async def handle_websocket_communication(websocket, manager):
                         "content": "error",
                         "output": "Unknown command received by server"
                     })
-            except WebSocketDisconnect:
+            except WebSocketDisconnect as exc:
                 # A closed tab or a new research run closing the old socket is a
                 # normal disconnect, not an error. Let the endpoint clean it up.
+                stop_requested = exc.code == 1000 and exc.reason == "Stopped by the user"
                 raise
             except Exception as e:
                 logger.error(f"WebSocket error: {str(e)}\n{traceback.format_exc()}")
@@ -417,21 +482,26 @@ async def handle_websocket_communication(websocket, manager):
                 break
     finally:
         if running_task is not None:
-            if not running_task.done():
+            if stop_requested and not running_task.done():
                 running_task.cancel()
-            try:
-                await running_task
-            except asyncio.CancelledError:
-                pass
-            except Exception:
-                logger.exception("Research task failed while the WebSocket was closing")
-        feedback_queue = getattr(websocket.state, "human_feedback", None)
-        if feedback_queue is not None:
-            while not feedback_queue.empty():
                 try:
-                    feedback_queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    break
+                    await running_task
+                except asyncio.CancelledError:
+                    pass
+            elif running_task.done():
+                try:
+                    await running_task
+                except asyncio.CancelledError:
+                    pass
+                except Exception:
+                    logger.exception("Research task failed while the WebSocket was closing")
+            else:
+                logger.info("WebSocket closed; research task continues in background")
+        feedback_queue = getattr(websocket.state, "human_feedback", None)
+        if feedback_queue is not None and running_task is not None and not running_task.done() and not stop_requested:
+            # A multi-agent plan may be waiting for feedback after the client
+            # disappears. Continue with the proposed outline instead of hanging.
+            feedback_queue.put_nowait(json.dumps({"type": "human_feedback", "content": "no"}))
 
 def extract_command_data(json_data: Dict) -> tuple:
     public_demo = os.getenv("PUBLIC_DEMO_MODE") == "1"
@@ -448,4 +518,5 @@ def extract_command_data(json_data: Dict) -> tuple:
         json_data.get("mcp_strategy", "fast"),
         [] if public_demo else json_data.get("mcp_configs", []),
         json_data.get("max_search_results"),
+        json_data.get("research_id"),
     )

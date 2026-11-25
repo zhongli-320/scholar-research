@@ -55,6 +55,7 @@ export default function ResearchScreen({ id }: { id: string }) {
   const [saved, setSaved] = useState<Saved>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
   const [now, setNow] = useState(0);
+  const pending = !isLive ? rememberedRun(id) : null;
 
   useEffect(() => {
     if (isLive) return;
@@ -68,6 +69,12 @@ export default function ResearchScreen({ id }: { id: string }) {
       current = false;
     };
   }, [id, isLive, attempt]);
+
+  useEffect(() => {
+    if (saved.status !== 'missing' || !pending?.startedAt || Date.now() - pending.startedAt > 30 * 60 * 1000) return;
+    const timer = window.setTimeout(() => setAttempt((n) => n + 1), 5_000);
+    return () => window.clearTimeout(timer);
+  }, [pending?.startedAt, saved.status]);
 
   const startedAt = live && !live.ended ? live.startedAt : undefined;
   useEffect(() => {
@@ -136,15 +143,22 @@ export default function ResearchScreen({ id }: { id: string }) {
   }
 
   if (saved.status === 'missing') {
-    const pending = rememberedRun(id);
     if (pending) {
+      const mayStillBeRunning = pending.startedAt !== undefined && Date.now() - pending.startedAt <= 30 * 60 * 1000;
       return (
-        <Notice eyebrow="已中断" title={pending.question}>
-          <p>页面重新加载时，研究在综述完成前中断。你的问题和设置已保留。</p>
+        <Notice eyebrow={mayStillBeRunning ? '后台处理中' : '已中断'} title={pending.question}>
+          <p>{mayStillBeRunning ? '页面连接已经中断，但后台仍会继续生成；结果完成后将在这里自动恢复。' : '研究在综述完成前中断。你的问题和设置已保留。'}</p>
           <div className="mt-6 flex flex-wrap items-center gap-4">
-            <button type="button" className="gr-btn" onClick={() => restart(pending.question, pending.brief)}>
-              重新开始
-            </button>
+            {!mayStillBeRunning && (
+              <button type="button" className="gr-btn" onClick={() => restart(pending.question, pending.brief)}>
+                重新开始
+              </button>
+            )}
+            {mayStillBeRunning && (
+              <Link href="/history/reviews" className="gr-btn">
+                查看综述历史
+              </Link>
+            )}
             <Link href="/reviews/new" className={textLink}>
               新建研究
             </Link>

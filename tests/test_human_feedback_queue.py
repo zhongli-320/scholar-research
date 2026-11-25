@@ -66,6 +66,57 @@ async def test_feedback_reaches_the_running_task_instead_of_being_dropped(monkey
 
 
 @pytest.mark.asyncio
+async def test_disconnect_leaves_research_running_in_background(monkeypatch):
+    from server import server_utils
+
+    release = asyncio.Event()
+    completed = asyncio.Event()
+
+    async def fake_start(websocket, data, manager):
+        await release.wait()
+        completed.set()
+
+    monkeypatch.setattr(server_utils, "handle_start_command", fake_start)
+    socket = FakeSocket(['start {"task": "x"}', None])
+
+    with pytest.raises(Exception):
+        await server_utils.handle_websocket_communication(socket, manager=None)
+
+    assert not completed.is_set()
+    release.set()
+    await asyncio.wait_for(completed.wait(), 2)
+
+
+@pytest.mark.asyncio
+async def test_explicit_stop_still_cancels_research(monkeypatch):
+    from fastapi import WebSocketDisconnect
+    from server import server_utils
+
+    cancelled = asyncio.Event()
+
+    async def fake_start(websocket, data, manager):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+
+    class StopSocket(FakeSocket):
+        async def receive_text(self):
+            message = await self.incoming.get()
+            if message is None:
+                await asyncio.sleep(0)
+                raise WebSocketDisconnect(code=1000, reason="Stopped by the user")
+            return message
+
+    monkeypatch.setattr(server_utils, "handle_start_command", fake_start)
+    socket = StopSocket(['start {"task": "x"}', None])
+
+    with pytest.raises(WebSocketDisconnect):
+        await server_utils.handle_websocket_communication(socket, manager=None)
+    assert cancelled.is_set()
+
+
+@pytest.mark.asyncio
 async def test_human_agent_reads_feedback_from_the_queue():
     from multi_agents.agents.human import HumanAgent
 

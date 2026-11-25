@@ -87,7 +87,7 @@ class WebSocketManager:
         except Exception as exc:
             logger.info(f"WebSocket already closed: {exc}")
 
-    async def start_streaming(self, task, report_type, report_source, source_urls, document_urls, tone, websocket, headers=None, query_domains=[], mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
+    async def start_streaming(self, task, report_type, report_source, source_urls, document_urls, tone, websocket, headers=None, query_domains=[], mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None, logs_handler=None):
         """Start streaming the output."""
         tone = Tone[tone]
         # add customized JSON config file path here
@@ -98,7 +98,7 @@ class WebSocketManager:
             task, report_type, report_source, source_urls, document_urls, tone, websocket, 
             headers=headers, query_domains=query_domains, config_path=config_path,
             mcp_enabled=mcp_enabled, mcp_strategy=mcp_strategy, mcp_configs=mcp_configs,
-            max_search_results=max_search_results
+            max_search_results=max_search_results, logs_handler=logs_handler
         )
         return report
 
@@ -126,10 +126,10 @@ async def run_agent(*args, **kwargs):
         _release_task_memory()
 
 
-async def _run_agent(task, report_type, report_source, source_urls, document_urls, tone: Tone, websocket, stream_output=stream_output, headers=None, query_domains=[], config_path="", return_researcher=False, mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None):
+async def _run_agent(task, report_type, report_source, source_urls, document_urls, tone: Tone, websocket, stream_output=stream_output, headers=None, query_domains=[], config_path="", return_researcher=False, mcp_enabled=False, mcp_strategy="fast", mcp_configs=[], max_search_results=None, logs_handler=None):
     """Run the agent."""    
     # Create logs handler for this research task
-    logs_handler = CustomLogsHandler(websocket, task)
+    logs_handler = logs_handler or CustomLogsHandler(websocket, task)
 
     # Log MCP initialization. Retriever and strategy are configured per-request
     # inside GPTResearcher via mcp_configs/mcp_strategy params — no os.environ

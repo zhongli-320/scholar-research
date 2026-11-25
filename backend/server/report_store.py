@@ -4,10 +4,16 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+_LOCKS: Dict[str, asyncio.Lock] = {}
+
+
 class ReportStore:
     def __init__(self, path: Path):
         self._path = path
-        self._lock = asyncio.Lock()
+        # The WebSocket worker and the HTTP routes use separate ReportStore
+        # instances. They must still serialize writes to the same JSON file.
+        key = str(path.resolve())
+        self._lock = _LOCKS.setdefault(key, asyncio.Lock())
 
     async def _ensure_parent_dir(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)

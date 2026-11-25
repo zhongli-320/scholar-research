@@ -59,3 +59,20 @@ async def test_content_update():
         assert log_data['content']['query'] == "test query"
         assert log_data['content']['sources'] == ["source1", "source2"]
         assert log_data['content']['report'] == "test report"
+
+
+@pytest.mark.asyncio
+async def test_closed_websocket_does_not_abort_event_persistence():
+    mock_websocket = AsyncMock()
+    mock_websocket.send_json.side_effect = RuntimeError("socket closed")
+    handler = CustomLogsHandler(mock_websocket, "detached_query")
+
+    event = {"type": "logs", "content": "writing_report", "output": "writing"}
+    await handler.send_json(event)
+    await handler.send_json({"type": "report", "output": "finished"})
+
+    assert handler.websocket is None
+    assert [item["type"] for item in handler.logs] == ["logs", "report"]
+    with open(handler.log_file, 'r') as f:
+        log_data = json.load(f)
+    assert [item["data"]["type"] for item in log_data["events"]] == ["logs", "report"]

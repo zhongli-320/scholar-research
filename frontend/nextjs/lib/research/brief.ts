@@ -72,8 +72,9 @@ export function parseBrief(raw: unknown): BriefValue {
 }
 
 /** The JSON the backend's `start` command reads, see `extract_command_data` in `backend/server/server_utils.py`. */
-export const startPayload = (task: string, brief: BriefValue) => ({
+export const startPayload = (task: string, brief: BriefValue, researchId?: string) => ({
   task,
+  research_id: researchId,
   report_type: brief.report_type,
   report_source: brief.report_source,
   tone: brief.tone,

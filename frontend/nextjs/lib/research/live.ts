@@ -2,7 +2,7 @@ import { v4 as uuid } from 'uuid';
 import { getHost } from '@/helpers/getHost';
 import { startPayload, type BriefValue } from './brief';
 import { parseEvent, type ResearchEvent } from './events';
-import { reportsStore, saveReport, updateReport, type StoredChatMessage, type StoredReport } from './reports';
+import { getReport, reportsStore, saveReport, storedEvents, updateReport, type StoredChatMessage, type StoredReport } from './reports';
 import { reduceRun } from './run';
 
 /** A research running over `/ws` in this tab. Snapshots are replaced, never mutated, so React can subscribe. */
@@ -29,6 +29,8 @@ const finishing = new Set<string>();
 
 const PENDING_KEY = (id: string) => `gptr-run-${id}`;
 const NOTIFY_MS = 80;
+const RECOVERY_POLL_MS = 5_000;
+const RECOVERY_ATTEMPTS = 360;
 
 const notify = (id: string) => {
   if (pending.has(id)) return;
@@ -58,7 +60,7 @@ const push = (id: string, event: ResearchEvent) => {
 const wsUrl = () => `${getHost().replace(/\/+$/, '').replace(/^http/, 'ws')}/ws`;
 
 /** Keeps the question and brief for this tab, so a reload mid run can offer to start it again. */
-export function rememberedRun(id: string): { question: string; brief: BriefValue } | null {
+export function rememberedRun(id: string): { question: string; brief: BriefValue; startedAt?: number } | null {
   try {
     return JSON.parse(sessionStorage.getItem(PENDING_KEY(id)) ?? 'null');
   } catch {
@@ -128,7 +130,7 @@ function connect(id: string) {
 
   socket.onopen = () => {
     opened = true;
-    socket.send(`start ${JSON.stringify(startPayload(run.question, run.brief))}`);
+    socket.send(`start ${JSON.stringify(startPayload(run.question, run.brief, id))}`);
     heartbeat = window.setInterval(() => socket.readyState === WebSocket.OPEN && socket.send('ping'), 30_000);
   };
 
@@ -155,24 +157,67 @@ function connect(id: string) {
     const current = runs.get(id);
     if (!current || current.ended || finishing.has(id)) return;
     const failed = current.events.some((e) => e.type === 'error' || (e.type === 'logs' && e.content === 'error'));
-    if (current.stoppedAt === undefined && !failed) {
+    if (current.stoppedAt !== undefined || failed) {
+      update(id, { ended: true });
+      return;
+    }
+    if (!opened) {
       push(id, {
         type: 'error',
-        output: opened
-          ? '综述完成前，与后端的连接已关闭。'
-          : `无法连接位于 ${getHost()} 的后端。请运行 python main.py 启动后端，然后重试。`,
+        output: `无法连接位于 ${getHost()} 的后端。请运行 python main.py 启动后端，然后重试。`,
         t: secondsIn(current),
       });
+      update(id, { ended: true });
+      return;
     }
-    update(id, { ended: true });
+    push(id, {
+      type: 'logs',
+      content: 'connection_recovering',
+      output: '连接已中断，后台仍在继续；完成后将自动恢复结果。',
+      t: secondsIn(current),
+    });
+    void recoverCompletedReport(id);
   };
+}
+
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+async function recoverCompletedReport(id: string) {
+  for (let attempt = 0; attempt < RECOVERY_ATTEMPTS; attempt += 1) {
+    await wait(RECOVERY_POLL_MS);
+    const current = runs.get(id);
+    if (!current || current.ended || current.stoppedAt !== undefined) return;
+    try {
+      const report = await getReport(id);
+      if (!report) continue;
+      sessionStorage.removeItem(PENDING_KEY(id));
+      reportsStore.upsert(report);
+      update(id, {
+        events: storedEvents(report.orderedData),
+        chat: report.chatMessages ?? current.chat,
+        ended: true,
+        saved: Promise.resolve(true),
+      });
+      return;
+    } catch {
+      // A transient API failure should not discard a backend job.
+    }
+  }
+  const current = runs.get(id);
+  if (!current || current.ended) return;
+  push(id, {
+    type: 'error',
+    output: '后台任务长时间未返回结果，请稍后到综述历史查看。',
+    t: secondsIn(current),
+  });
+  update(id, { ended: true });
 }
 
 export function startResearch(question: string, brief: BriefValue): string {
   const id = uuid();
   runs.set(id, { id, question, brief, events: [], startedAt: performance.now(), ended: false, chat: [] });
   try {
-    sessionStorage.setItem(PENDING_KEY(id), JSON.stringify({ question, brief }));
+    sessionStorage.setItem(PENDING_KEY(id), JSON.stringify({ question, brief, startedAt: Date.now() }));
   } catch {
     // Private mode can refuse storage; the run itself doesn't need it.
   }

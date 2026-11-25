@@ -79,6 +79,7 @@ class WebSocketManagerTests(unittest.IsolatedAsyncioTestCase):
         websocket_manager = _load_websocket_manager_module()
         manager = websocket_manager.WebSocketManager()
         call_kwargs = {}
+        logs_handler = object()
 
         async def fake_run_agent(*args, **kwargs):
             call_kwargs.update(kwargs)
@@ -95,10 +96,12 @@ class WebSocketManagerTests(unittest.IsolatedAsyncioTestCase):
                 document_urls=[],
                 tone="Objective",
                 websocket=object(),
+                logs_handler=logs_handler,
             )
 
         self.assertEqual(report, "stub-report")
         self.assertEqual(call_kwargs["config_path"], "custom-config")
+        self.assertIs(call_kwargs["logs_handler"], logs_handler)
 
     async def test_run_agent_caps_global_research_concurrency(self):
         with patch.dict(os.environ, {"MAX_CONCURRENT_RESEARCH": "2"}, clear=False):
